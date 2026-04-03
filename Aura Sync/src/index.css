@@ -1,0 +1,85 @@
+@import "tailwindcss";
+
+@theme {
+  --color-obsidian: #050505;
+  --color-obsidian-light: #0a0a0f;
+  --color-cobalt: #2563eb;
+  --color-cobalt-bright: #3b82f6;
+  --color-cobalt-dim: #1e40af;
+  --color-magenta: #e535ab;
+  --color-violet: #7c3aed;
+  --color-hazard: #f97316;
+  --color-terminal: #00ff88;
+  --color-glass-border: rgba(37, 99, 235, 0.15);
+  --color-glass-bg: rgba(10, 10, 15, 0.8);
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+  border-radius: 0px !important;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #050505;
+  overflow-x: hidden;
+}
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+.glass {
+  background: rgba(10, 10, 15, 0.8);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  border: 1px solid rgba(37, 99, 235, 0.15);
+}
+
+.glass-strong {
+  background: rgba(10, 10, 15, 0.92);
+  backdrop-filter: blur(48px);
+  -webkit-backdrop-filter: blur(48px);
+  border: 1px solid rgba(37, 99, 235, 0.2);
+}
+
+.glow-cobalt {
+  box-shadow: 0 0 20px rgba(37, 99, 235, 0.3), 0 0 60px rgba(37, 99, 235, 0.1);
+}
+
+.glow-magenta {
+  box-shadow: 0 0 20px rgba(229, 53, 171, 0.4), 0 0 60px rgba(229, 53, 171, 0.15);
+}
+
+.text-glow-cobalt {
+  text-shadow: 0 0 12px rgba(37, 99, 235, 0.6);
+}
+
+.text-glow-magenta {
+  text-shadow: 0 0 12px rgba(229, 53, 171, 0.6);
+}
+
+@keyframes pulse-cobalt {
+  0%, 100% { box-shadow: 0 0 15px rgba(37, 99, 235, 0.3); }
+  50% { box-shadow: 0 0 35px rgba(37, 99, 235, 0.6); }
+}
+
+@keyframes scan-line {
+  0% { top: 0%; }
+  100% { top: 100%; }
+}
+
+@keyframes terminal-blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+.animate-pulse-cobalt { animation: pulse-cobalt 2s ease-in-out infinite; }
+.animate-scan { animation: scan-line 2s linear infinite; }
+.animate-blink { animation: terminal-blink 1s step-end infinite; }
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] { -moz-appearance: textfield; }
