@@ -1,67 +1,100 @@
 import { motion } from 'framer-motion';
-import { ShieldAlert, Heart, Activity, ShieldCheck, Watch } from 'lucide-react';
+import { ShieldAlert, Heart, Activity, ShieldCheck, Watch, Zap } from 'lucide-react';
 import { useWorkoutStore } from '../store/useWorkoutStore';
-import { getHeatColor } from '../engine/heatmap';
+
+const EVOLUTION_TIERS = [
+  { label: 'VOID', color: '#1A1A1B', minVol: -1 },
+  { label: 'PULSE', color: '#00D1FF', minVol: 5000 },
+  { label: 'NEBULA', color: '#BD00FF', minVol: 25000 },
+  { label: 'SOLAR', color: '#FFD600', minVol: 75000 },
+  { label: 'GOD', color: '#FFFFFF', minVol: 250000 },
+];
 
 export default function EvolutionRank() {
-  const { evolutionXP, history, muscleHeat, watchConnected, connectWatch } = useWorkoutStore();
+  const { evolutionXP, history, muscleHeat, muscleVolume, watchConnected, connectWatch, session, activeCardId } = useWorkoutStore();
 
-  const totalWorkouts = history.length;
-  const verifiedRate = totalWorkouts === 0 ? 0 : Math.min(100, 50 + (totalWorkouts * 5));
-  const overloadedMuscles = muscleHeat.filter(m => m.heat > 70);
+  const getMuscleColor = (muscle: string) => {
+    const vol = muscleVolume[muscle] || 0;
+    const tier = [...EVOLUTION_TIERS].reverse().find(t => vol >= t.minVol) || EVOLUTION_TIERS[0];
+    return tier.color;
+  };
+
+  const getIntensityGlow = (muscle: string) => {
+    if (!session) return "0px 0px 0px transparent";
+    const heat = muscleHeat.find(m => m.group === muscle)?.heat || 0;
+    const isPulsing = heat > 50;
+    const isMax = heat > 85;
+    
+    if (isMax) return `0 0 25px ${getMuscleColor(muscle)}`;
+    if (isPulsing) return `0 0 10px ${getMuscleColor(muscle)}`;
+    return "none";
+  };
 
   return (
     <div className="min-h-screen bg-[#050505] p-4 pt-12 pb-24">
       <div className="px-2 mb-8">
-        <h2 className="text-sm font-black uppercase tracking-[0.4em] text-white/70 italic">Evolution_Rank</h2>
+        <h2 className="text-sm font-black uppercase tracking-[0.4em] text-white/70 italic">Evolution_Anatomy</h2>
         <p className="text-[10px] text-white/20 mt-1 uppercase font-mono tracking-widest font-black">
-          AURA_TIER: <span className="text-cobalt">{evolutionXP < 500 ? 'DORMANT' : evolutionXP < 1500 ? 'AWAKENED' : 'RADIANT'}</span>
+          AURA_TIER: <span className="text-cobalt">{evolutionXP < 1000 ? 'DORMANT' : evolutionXP < 5000 ? 'AWAKENED' : 'RADIANT'}</span>
         </p>
       </div>
 
-      <div className="glass p-8 mb-8 flex flex-col items-center relative overflow-hidden border-t border-white/5">
-        <div className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em] mb-10">System_Stress_Scan</div>
-        
-        <div className="relative w-40 h-64 flex justify-center">
+      <div className="glass p-10 mb-8 flex flex-col items-center relative overflow-hidden border-t border-white/5">
+        <div className="relative w-48 h-80 flex justify-center">
            <svg viewBox="0 0 100 200" className="w-full h-full">
-              <circle cx="50" cy="20" r="15" fill="none" stroke="white" strokeWidth="1" opacity="0.1" />
-              <line x1="50" y1="35" x2="50" y2="120" stroke="white" strokeWidth="1" opacity="0.1" />
-              <line x1="50" y1="50" x2="20" y2="90" stroke={getHeatColor(muscleHeat.find(m=>m.group==='chest')?.heat || 0)} strokeWidth="8" />
-              <line x1="50" y1="50" x2="80" y2="90" stroke={getHeatColor(muscleHeat.find(m=>m.group==='chest')?.heat || 0)} strokeWidth="8" />
-              <line x1="50" y1="120" x2="30" y2="185" stroke={getHeatColor(muscleHeat.find(m=>m.group==='quads')?.heat || 0)} strokeWidth="10" />
-              <line x1="50" y1="120" x2="70" y2="185" stroke={getHeatColor(muscleHeat.find(m=>m.group==='quads')?.heat || 0)} strokeWidth="10" />
+              {/* HEAD */}
+              <circle cx="50" cy="25" r="12" fill={getMuscleColor('core')} className="transition-all duration-1000" />
+              {/* CHEST */}
+              <rect x="35" y="42" width="30" height="20" fill={getMuscleColor('chest')} style={{ filter: `drop-shadow(${getIntensityGlow('chest')})` }} className="transition-all duration-1000" />
+              {/* LATS / BACK */}
+              <path d="M35 45 L25 75 L35 75 Z" fill={getMuscleColor('back')} />
+              <path d="M65 45 L75 75 L65 75 Z" fill={getMuscleColor('back')} />
+              {/* ARMS */}
+              <rect x="22" y="45" width="8" height="40" fill={getMuscleColor('biceps')} className="transition-all duration-1000" />
+              <rect x="70" y="45" width="8" height="40" fill={getMuscleColor('biceps')} className="transition-all duration-1000" />
+              {/* CORE */}
+              <rect x="40" y="65" width="20" height="25" fill={getMuscleColor('core')} className="transition-all duration-1000" />
+              {/* LEGS */}
+              <rect x="35" y="95" width="12" height="60" fill={getMuscleColor('legs')} style={{ filter: `drop-shadow(${getIntensityGlow('legs')})` }} className="transition-all duration-1000" />
+              <rect x="53" y="95" width="12" height="60" fill={getMuscleColor('legs')} style={{ filter: `drop-shadow(${getIntensityGlow('legs')})` }} className="transition-all duration-1000" />
            </svg>
+
+           {session && (
+             <div className="absolute top-0 right-0 p-2 bg-cobalt text-black text-[8px] font-black uppercase animate-pulse">Live_Sync_Active</div>
+           )}
         </div>
 
-        {overloadedMuscles.length > 0 && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-8 flex items-center gap-3 text-hazard animate-pulse bg-hazard/10 px-4 py-2 border border-hazard/30">
-            <ShieldAlert size={16}/>
-            <span className="text-[10px] font-black uppercase tracking-widest leading-tight">CRITICAL OVERLOAD: REST {overloadedMuscles[0].group.toUpperCase()}</span>
-          </motion.div>
-        )}
+        <div className="mt-8 grid grid-cols-5 gap-1 w-full">
+           {EVOLUTION_TIERS.map(t => (
+             <div key={t.label} className="text-center">
+                <div className="h-1 w-full mb-1" style={{ backgroundColor: t.color }} />
+                <div className="text-[7px] font-black text-white/30">{t.label}</div>
+             </div>
+           ))}
+        </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 mb-8">
+      <div className="grid grid-cols-3 gap-2 mb-8 font-mono">
          <div className="glass p-5 text-center">
-            <Heart size={16} className={watchConnected ? "text-red-500" : "text-white/5"} />
-            <div className="text-xl font-black mt-2 text-white">{watchConnected ? '62ms' : '--'}</div>
-            <div className="text-[8px] text-white/20 uppercase font-bold mt-1 tracking-widest font-mono">Bio_HRV</div>
+            <Heart size={16} className={watchConnected ? "text-red-500 animate-pulse" : "text-white/5"} />
+            <div className="text-xl font-black mt-2 text-white">{watchConnected ? '64bpm' : '--'}</div>
+            <div className="text-[8px] text-white/20 uppercase font-bold tracking-widest">Sync_HR</div>
          </div>
-         <div className="glass p-5 text-center">
+         <div className="glass p-5 text-center border-b border-cobalt/40">
             <Activity size={16} className="text-cobalt" />
-            <div className="text-xl font-black mt-2 text-white">{totalWorkouts}</div>
-            <div className="text-[8px] text-white/20 uppercase font-bold mt-1 tracking-widest font-mono">Sessions</div>
+            <div className="text-xl font-black mt-2 text-white">{history.length}</div>
+            <div className="text-[8px] text-white/20 uppercase font-bold tracking-widest">History</div>
          </div>
          <div className="glass p-5 text-center">
             <ShieldCheck size={16} className="text-terminal" />
-            <div className="text-xl font-black mt-2 text-white">{verifiedRate}%</div>
-            <div className="text-[8px] text-white/20 uppercase font-bold mt-1 tracking-widest font-mono">Verified</div>
+            <div className="text-xl font-black mt-2 text-white">{Math.min(100, (history.length * 4))}%</div>
+            <div className="text-[8px] text-white/20 uppercase font-bold tracking-widest">Verified</div>
          </div>
       </div>
 
       {!watchConnected && (
-         <button onClick={connectWatch} className="w-full py-5 bg-cobalt text-black font-black uppercase text-[11px] tracking-[0.4em] glow-cobalt flex items-center justify-center gap-3 active:scale-95 transition-all">
-           <Watch size={16}/> AUTHORIZE BIO-SYNC
+         <button onClick={connectWatch} className="w-full py-5 bg-white/5 border border-white/10 text-white/60 font-black uppercase text-[10px] tracking-[0.4em] active:bg-cobalt active:text-black transition-all">
+           Link Hardware Sensor
          </button>
       )}
     </div>
