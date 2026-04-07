@@ -81,7 +81,6 @@ export const useWorkoutStore = create<WorkoutState>()(
       ghostVolume: 0,
 
       setUserName: (name) => set({ userName: name }),
-
       startSession: () => set({ session: { id: `ws-${Date.now()}`, startedAt: Date.now(), cards: [] } }),
 
       endSession: () => {
@@ -93,13 +92,16 @@ export const useWorkoutStore = create<WorkoutState>()(
           sets: c.sets.filter(s => s.completed).map(s => ({ weight: s.weight, reps: s.reps })),
           totalVolume: c.sets.filter(s => s.completed).reduce((sum, s) => sum + s.weight * s.reps, 0)
         })).filter(e => e.sets.length > 0);
+        
         const sessionVol = newEntries.reduce((s, e) => s + e.totalVolume, 0);
+        
         set({
           session: null,
           history: [...history, ...newEntries],
           totalWorkouts: totalWorkouts + 1,
           evolutionXP: evolutionXP + Math.round(sessionVol / 100),
-          ghostVolume: ghostVolume + (sessionVol * (0.95 + Math.random() * 0.1)),
+          // SYNC GHOST: Rival matches your session volume exactly plus a small random deviation
+          ghostVolume: ghostVolume + (sessionVol * (0.98 + Math.random() * 0.05)),
           activeCardId: null,
           activeSetIndex: 0
         });
@@ -112,15 +114,25 @@ export const useWorkoutStore = create<WorkoutState>()(
         set({ session: { ...s, cards: [...s.cards, { id: `c-${Date.now()}`, exercise: ex, sets: defaultSets }] } });
       },
 
+      removeExercise: (id) => set({ session: { ...get().session!, cards: get().session!.cards.filter(c => c.id !== id) } }),
+      
       addSet: (cardId) => {
         const s = get().session;
         if (!s) return;
-        set({ session: { ...s, cards: s.cards.map(c => c.id !== cardId ? c : { ...c, sets: [...c.sets, { id: `s-${Date.now()}`, weight: c.sets[c.sets.length-1].weight, reps: c.sets[c.sets.length-1].reps, completed: false }] }) } });
+        set({ session: { ...s, cards: s.cards.map(c => c.id !== cardId ? c : { ...c, sets: [...c.sets, { id: `s-${Date.now()}`, weight: c.sets[c.sets.length-1]?.weight || 0, reps: c.sets[c.sets.length-1]?.reps || 0, completed: false }] }) } });
       },
 
-      removeExercise: (id) => set({ session: { ...get().session!, cards: get().session!.cards.filter(c => c.id !== id) } }),
-      removeSet: (cid, sid) => set({ session: { ...get().session!, cards: get().session!.cards.map(c => c.id !== cid ? c : { ...c, sets: c.sets.filter(s => s.id !== sid) }) } }),
-      updateSet: (cardId, setId, field, val) => set({ session: { ...get().session!, cards: get().session!.cards.map(c => c.id !== cardId ? c : { ...c, sets: c.sets.map(st => st.id === setId ? { ...st, [field]: val } : st) }) } }),
+      removeSet: (cardId, setId) => {
+        const s = get().session;
+        if (!s) return;
+        set({ session: { ...s, cards: s.cards.map(c => c.id !== cardId ? c : { ...c, sets: c.sets.filter(st => st.id !== setId) }) } });
+      },
+
+      updateSet: (cardId, setId, field, val) => {
+        const s = get().session;
+        if (!s) return;
+        set({ session: { ...s, cards: s.cards.map(c => c.id !== cardId ? c : { ...c, sets: c.sets.map(st => st.id === setId ? { ...st, [field]: val } : st) }) } });
+      },
 
       completeSet: (cardId, setId) => {
         const { session, history, muscleHeat, evolutionXP } = get();
@@ -152,7 +164,7 @@ export const useWorkoutStore = create<WorkoutState>()(
           await device.gatt.connect();
           set({ watchConnected: true });
         } catch (e) {
-          console.error("Bluetooth pairing cancelled");
+          console.error("Bluetooth link failed");
         }
       },
 
