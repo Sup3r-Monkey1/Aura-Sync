@@ -21,43 +21,44 @@ export default function EvolutionRank() {
   const getMGlow = (m: string) => {
     if (!session) return "none";
     const h = muscleHeat.find(x => x.group === m)?.heat || 0;
-    return h > 45 ? `drop-shadow(0 0 ${h/5}px ${getMColor(m)})` : "none";
+    return h > 45 ? `drop-shadow(0 0 ${h/6}px ${getMColor(m)})` : "none";
   };
 
   return (
-    <div className="min-h-screen bg-[#050505] p-4 pt-12 pb-24 overflow-x-hidden">
+    <div className="min-h-screen bg-[#050505] p-4 pt-10 pb-24 overflow-x-hidden">
       <h2 className="text-sm font-black uppercase tracking-[0.4em] text-white/70 italic px-2">Evolution_Anatomy</h2>
-      <p className="text-[10px] text-white/30 mt-1 px-2 uppercase font-mono tracking-widest font-black">CORE_XP: <span className="text-cobalt">{evolutionXP}</span></p>
+      <p className="text-[9px] text-white/30 mt-1 px-2 uppercase font-mono tracking-widest font-black">CORE_XP: <span className="text-cobalt">{evolutionXP}</span></p>
 
-      <div className="glass-strong p-10 mt-8 mb-8 flex flex-col items-center relative overflow-hidden border-t border-white/10 rounded-3xl">
-        <div className="relative w-64 h-96 flex justify-center">
+      <div className="glass-strong p-8 mt-6 mb-6 flex flex-col items-center relative overflow-hidden border-t border-white/10 rounded-3xl">
+        <div className="relative w-56 h-80 flex justify-center">
            <svg viewBox="0 0 200 400" className="w-full h-full drop-shadow-[0_0_2px_rgba(255,255,255,0.05)]">
               {/* HEAD */}
-              <path d="M88 40 Q100 22 112 40 Q112 65 100 72 Q88 65 88 40 Z" fill={getMColor('core')} />
-              {/* CHEST / TORSO */}
-              <path d="M65 80 Q100 72 135 80 L130 160 Q100 175 70 160 Z" fill={getMColor('chest')} style={{ filter: getMGlow('chest') }} />
-              {/* TRAPS / BACK */}
-              <path d="M65 80 L50 140 Q65 150 70 140 Z" fill={getMColor('back')} />
-              <path d="M135 80 L150 140 Q135 150 130 140 Z" fill={getMColor('back')} />
+              <path d="M90 45 Q100 28 110 45 Q110 65 100 72 Q90 65 90 45 Z" fill={getMColor('core')} />
+              {/* CHEST / ABS */}
+              <path d="M70 85 Q100 78 130 85 L125 155 Q100 168 75 155 Z" fill={getMColor('chest')} style={{ filter: getMGlow('chest') }} />
+              <rect x="88" y="152" width="24" height="35" fill={getMColor('core')} rx="2" className="opacity-80" />
+              {/* BACK */}
+              <path d="M70 88 L55 135 Q70 145 75 135 Z" fill={getMColor('back')} />
+              <path d="M130 88 L145 135 Q130 145 125 135 Z" fill={getMColor('back')} />
               {/* ARMS */}
-              <path d="M50 82 Q35 85 35 180 L50 180 Z" fill={getMColor('biceps')} style={{ filter: getMGlow('biceps') }} />
-              <path d="M150 82 Q165 85 165 180 L150 180 Z" fill={getMColor('biceps')} style={{ filter: getMGlow('biceps') }} />
+              <path d="M55 90 Q40 92 40 175 L55 175 Z" fill={getMColor('biceps')} style={{ filter: getMGlow('biceps') }} />
+              <path d="M145 90 Q160 92 160 175 L145 175 Z" fill={getMColor('biceps')} style={{ filter: getMGlow('biceps') }} />
               {/* LEGS */}
-              <path d="M70 170 Q60 250 65 370 L95 370 L100 170 Z" fill={getMColor('quads')} style={{ filter: getMGlow('quads') }} />
-              <path d="M130 170 Q140 250 135 370 L105 370 L100 170 Z" fill={getMColor('quads')} style={{ filter: getMGlow('quads') }} />
+              <path d="M75 165 Q65 240 70 365 L95 365 L100 165 Z" fill={getMColor('quads')} style={{ filter: getMGlow('quads') }} />
+              <path d="M125 165 Q135 240 130 365 L105 365 L100 165 Z" fill={getMColor('quads')} style={{ filter: getMGlow('quads') }} />
            </svg>
         </div>
-        <div className="w-full mt-10 grid grid-cols-5 gap-1 border-t border-white/5 pt-6">
-           {TIERS.map(t => (<div key={t.label} className="flex flex-col items-center"><div className="h-1.5 w-full rounded-full" style={{ backgroundColor: t.color }} /><span className="text-[6px] font-black text-white/30 mt-1 font-mono tracking-tighter">{t.label}</span></div>))}
+        <div className="w-full mt-6 grid grid-cols-5 gap-1 border-t border-white/5 pt-4">
+           {TIERS.map(t => (<div key={t.label} className="flex flex-col items-center"><div className="h-1 w-full rounded-full" style={{ backgroundColor: t.color }} /><span className="text-[5px] font-black text-white/30 mt-1 font-mono tracking-tighter">{t.label}</span></div>))}
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-3 mb-10 font-mono">
-         <div className="glass p-5 text-center"><Heart size={16} className={watchConnected ? "text-red-500 animate-pulse" : "text-white/5"} /><div className="text-xl font-black mt-2 text-white">{watchConnected ? "64bpm" : "--"}</div><div className="text-[8px] text-white/20 uppercase font-bold tracking-widest mt-1">Bio_Sync</div></div>
-         <div className="glass p-5 text-center border-b border-cobalt/40"><Activity size={16} className="text-cobalt" /><div className="text-xl font-black mt-2 text-white">{history.length}</div><div className="text-[8px] text-white/20 uppercase font-bold tracking-widest mt-1">Uploads</div></div>
-         <div className="glass p-5 text-center"><ShieldCheck size={16} className="text-terminal" /><div className="text-xl font-black mt-2 text-white">{Math.min(100, history.length*5)}%</div><div className="text-[8px] text-white/20 uppercase font-bold tracking-widest mt-1">Verified</div></div>
+      <div className="grid grid-cols-3 gap-2 mb-8 font-mono">
+         <div className="glass p-4 text-center rounded-xl"><Heart size={14} className={watchConnected ? "text-red-500 animate-pulse" : "text-white/5"} /><div className="text-lg font-black mt-2 text-white">{watchConnected ? "64bpm" : "--"}</div><div className="text-[7px] text-white/20 uppercase font-bold tracking-widest mt-1">Bio_Sync</div></div>
+         <div className="glass p-4 text-center border-b border-cobalt/40 rounded-xl"><Activity size={14} className="text-cobalt" /><div className="text-lg font-black mt-2 text-white">{history.length}</div><div className="text-[7px] text-white/20 uppercase font-bold tracking-widest mt-1">Logs</div></div>
+         <div className="glass p-4 text-center rounded-xl"><ShieldCheck size={14} className="text-terminal" /><div className="text-lg font-black mt-2 text-white">{Math.min(100, history.length*5)}%</div><div className="text-[7px] text-white/20 uppercase font-bold tracking-widest mt-1">Verified</div></div>
       </div>
-      {!watchConnected && <button onClick={connectWatch} className="w-full py-5 bg-white/5 border border-white/10 text-white/40 font-black uppercase text-[10px] tracking-[0.4em] active:bg-cobalt active:text-black transition-all">Pair Hardware Sensor</button>}
+      {!watchConnected && <button onClick={connectWatch} className="w-full py-5 bg-white/5 border border-white/10 text-white/40 font-black uppercase text-[8px] tracking-[0.4em] active:bg-cobalt active:text-black transition-all rounded-xl">Initialize Hardware Bio-Link</button>}
     </div>
   );
 }
