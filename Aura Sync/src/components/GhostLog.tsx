@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, X, Check, Clock, Trash2, Power, RotateCcw, Cpu, Dumbbell as DbIcon, ShieldCheck, Edit3, Utensils, Zap, Activity } from 'lucide-react';
+import { X, Check, Clock, Trash2, Power, RotateCcw, Cpu, Dumbbell as DbIcon, ShieldCheck, Edit3, Utensils, Zap } from 'lucide-react';
 import { useWorkoutStore, triggerAlert } from '../store/useWorkoutStore';
 import { workoutRegistry } from '../data/workoutRegistry';
 
@@ -35,7 +35,7 @@ export default function GhostLog() {
       }
     }
     return () => clearInterval(interval);
-  }, [timeLeft, isPaused, timerState, session, activeCardId, activeSetIndex]);
+  }, [timeLeft, isPaused, timerState]);
 
   const handleLaunch = () => {
     const ids = dailyProtocols[activeDay] || [];
@@ -45,28 +45,24 @@ export default function GhostLog() {
 
   if (!session) return (
     <div className="min-h-screen bg-[#050505] p-4 pt-12 pb-32 overflow-y-auto no-scrollbar">
-      <div className="flex items-center gap-3 mb-8 px-2">
-        <div className="w-2 h-6 bg-cobalt" />
-        <h2 className="text-xl font-black italic text-white uppercase tracking-tighter">Sovereign_Protocol</h2>
-      </div>
+      <h2 className="text-xl font-black italic text-white uppercase mb-8 px-2 tracking-tighter">Sovereign_Protocol</h2>
       
-      {/* TACTICAL MATRIX CONFIG */}
-      <div className="glass-strong p-6 mb-8 border-t border-white/10">
+      <div className="glass-strong p-6 mb-8 border-t border-white/10 rounded-2xl">
         <div className="flex gap-1 overflow-x-auto no-scrollbar mb-8">
           {days.map(d => (
-            <button key={d} onClick={() => setActiveDay(d)} className={`px-4 py-2 text-[10px] font-black uppercase border transition-all ${activeDay === d ? 'bg-cobalt text-black border-cobalt shadow-[0_0_15px_#2563eb]' : 'bg-white/5 border-white/10 text-white/30'}`}>
+            <button key={d} onClick={() => setActiveDay(d)} className={`px-4 py-2 text-[10px] font-black uppercase border transition-all ${activeDay === d ? 'bg-cobalt text-black border-cobalt' : 'bg-white/5 border-white/10 text-white/30'}`}>
               {d.slice(0,3)}
             </button>
           ))}
         </div>
 
-        <div className="flex gap-4 mb-6 px-1">
-          <button onClick={() => setActiveTab('machines')} className={`text-[10px] font-black uppercase flex items-center gap-2 ${activeTab === 'machines' ? 'text-cobalt text-glow-cobalt' : 'text-white/20'}`}><Cpu size={14}/> Machines</button>
+        <div className="flex gap-4 mb-6">
+          <button onClick={() => setActiveTab('machines')} className={`text-[10px] font-black uppercase flex items-center gap-2 ${activeTab === 'machines' ? 'text-cobalt' : 'text-white/20'}`}><Cpu size={14}/> Machines</button>
           <button onClick={() => setActiveTab('hardware')} className={`text-[10px] font-black uppercase flex items-center gap-2 ${activeTab === 'hardware' ? 'text-white' : 'text-white/20'}`}><DbIcon size={14}/> Hardware</button>
           <button onClick={() => setActiveTab('cardio')} className={`text-[10px] font-black uppercase flex items-center gap-2 ${activeTab === 'cardio' ? 'text-magenta' : 'text-white/20'}`}><Zap size={14}/> Cardio</button>
         </div>
 
-        <div className="grid grid-cols-1 gap-2 max-h-[40vh] overflow-y-auto no-scrollbar mb-8">
+        <div className="grid grid-cols-1 gap-2 max-h-[40vh] overflow-y-auto no-scrollbar mb-8 border-y border-white/5 py-4">
           {workoutRegistry
             .filter(ex => {
               if (activeTab === 'machines') return ex.isMachine && ex.type === 'strength';
@@ -76,30 +72,19 @@ export default function GhostLog() {
             .map(ex => {
               const isSelected = dailyProtocols[activeDay]?.includes(ex.id);
               return (
-                <button key={ex.id} onClick={() => toggleDailyExercise(activeDay, ex.id)} className={`flex justify-between items-center p-4 border-l-2 transition-all ${isSelected ? 'bg-cobalt/10 border-cobalt shadow-inner' : 'bg-white/[0.01] border-white/5'}`}>
-                  <div className="text-left">
-                    <span className={`text-[10px] font-black uppercase block ${isSelected ? 'text-white' : 'text-white/30'}`}>{ex.name}</span>
-                    <span className="text-[7px] text-white/10 uppercase tracking-widest">{ex.primaryMuscles.join(', ')}</span>
-                  </div>
-                  {isSelected && <ShieldCheck size={14} className="text-cobalt animate-pulse" />}
+                <button key={ex.id} onClick={() => toggleDailyExercise(activeDay, ex.id)} className={`flex justify-between items-center p-4 border-l-2 ${isSelected ? 'bg-cobalt/10 border-cobalt' : 'bg-white/[0.01] border-white/5'}`}>
+                  <span className={`text-[10px] font-bold uppercase ${isSelected ? 'text-white' : 'text-white/30'}`}>{ex.name}</span>
+                  {isSelected && <ShieldCheck size={14} className="text-cobalt" />}
                 </button>
               );
             })}
         </div>
-
-        <button onClick={handleLaunch} className="w-full py-5 bg-cobalt text-black font-black uppercase text-xs tracking-[0.4em] shadow-[0_0_30px_#2563eb40] active:scale-95 transition-all">Synchronize Daily Protocol</button>
+        <button onClick={handleLaunch} className="w-full py-5 bg-cobalt text-black font-black uppercase text-xs tracking-[0.4em] shadow-lg active:scale-95 transition-all">Initialize Daily Link</button>
       </div>
 
-      {/* SYNCED NOTEPADS */}
       <div className="grid gap-4">
-         <div className="glass p-5 border-l-2 border-magenta">
-            <div className="flex items-center gap-2 mb-4 text-[10px] font-black text-magenta uppercase tracking-widest"><Edit3 size={14}/> Schedule_Directives</div>
-            <p className="text-xs text-white/50 font-mono italic leading-relaxed bg-black/20 p-4 border border-white/5">{scheduleNotes[today] || "No directives found for current timestamp."}</p>
-         </div>
-         <div className="glass p-5 border-l-2 border-terminal">
-            <div className="flex items-center gap-2 mb-4 text-[10px] font-black text-terminal uppercase tracking-widest"><Utensils size={14}/> Intake_Script</div>
-            <textarea value={mealNotes} onChange={(e)=>updateMealNotes(e.target.value)} className="w-full h-24 bg-transparent text-xs text-white/60 outline-none resize-none font-mono" placeholder="Input daily caloric directives..."/>
-         </div>
+         <div className="glass p-5 border-l-2 border-magenta"><div className="text-[10px] font-black text-magenta uppercase mb-4 tracking-widest"><Edit3 size={14} className="inline mr-2"/> Schedule_Notes</div><p className="text-xs text-white/50 font-mono italic leading-relaxed bg-black/20 p-4 border border-white/5">{scheduleNotes[today] || "No directives found."}</p></div>
+         <div className="glass p-5 border-l-2 border-terminal"><div className="text-[10px] font-black text-terminal uppercase mb-4 tracking-widest"><Utensils size={14} className="inline mr-2"/> Intake_Script</div><textarea value={mealNotes} onChange={(e)=>updateMealNotes(e.target.value)} className="w-full h-24 bg-transparent text-xs text-white/60 outline-none resize-none font-mono" placeholder="Input daily caloric directives..."/></div>
       </div>
     </div>
   );
@@ -112,7 +97,7 @@ export default function GhostLog() {
            <button onClick={endSession} className="px-5 py-2 bg-red-500 text-black text-[10px] font-black uppercase active:scale-90 transition-all">Abort_Link</button>
         </div>
         <div className="flex flex-col items-center">
-          <div className="text-8xl font-black italic tracking-tighter text-glow-cobalt text-white">{Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}</div>
+          <div className="text-8xl font-black italic tracking-tighter text-glow-cobalt text-white font-mono">{Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}</div>
           <button onClick={() => setIsPaused(!isPaused)} className="mt-4 px-12 py-3 bg-white/10 text-[10px] font-black uppercase tracking-[0.2em] border border-white/10">{isPaused ? 'Resume' : 'Pause'}</button>
         </div>
       </div>
@@ -120,7 +105,7 @@ export default function GhostLog() {
         {session.cards.map((card) => (
           <div key={card.id} className="space-y-4">
             <div className="flex justify-between items-end border-l-2 border-cobalt pl-4">
-              <div><h3 className="text-lg font-black italic uppercase text-white/90">{card.exercise.name}</h3><p className="text-[9px] text-white/20 uppercase tracking-[0.2em] font-mono">{card.exercise.equipment}</p></div>
+              <div><h3 className="text-lg font-black italic uppercase text-white/90">{card.exercise.name}</h3><p className="text-[9px] text-white/30 uppercase tracking-[0.2em] font-mono">{card.exercise.equipment}</p></div>
               <button onClick={() => removeExercise(card.id)} className="text-white/10 p-2"><X size={16}/></button>
             </div>
             <div className="space-y-2">
@@ -136,7 +121,9 @@ export default function GhostLog() {
                        </div>
                     </div>
                     {!set.completed ? (
-                      <button onClick={() => isActive && timerState === 'SET' ? setTimeLeft(0) : setTracking(card.id, idx)} className={`px-6 py-2.5 text-[10px] font-black uppercase tracking-widest ${isActive && timerState === 'SET' ? 'bg-terminal text-black' : 'bg-cobalt text-white'}`}>{isActive && timerState === 'SET' ? 'Log' : 'Start'}</button>
+                      <button onClick={() => isActive && timerState === 'SET' ? setTimeLeft(0) : setTracking(card.id, idx)} className={`px-6 py-2.5 text-[10px] font-black uppercase tracking-widest ${isActive && timerState === 'SET' ? 'bg-terminal text-black' : 'bg-cobalt text-white'}`}>
+                        {isActive && timerState === 'SET' ? 'Log' : 'Start'}
+                      </button>
                     ) : <Check size={28} className="text-terminal" />}
                   </div>
                 );
