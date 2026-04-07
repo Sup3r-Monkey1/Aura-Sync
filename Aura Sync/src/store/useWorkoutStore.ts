@@ -5,7 +5,6 @@ import { createEmptyHeatmap, addHeatFromExercise, applyDecay } from '../engine/h
 import { calculateReadiness, simulateHRV, simulateSleep } from '../engine/readiness';
 import { isPR } from '../engine/overload';
 
-// 🔊 TOP-LEVEL EXPORT FOR BUILD STABILITY
 export const triggerAlert = (type: 'success' | 'warning') => {
   try {
     if ('vibrate' in navigator) navigator.vibrate(type === 'success' ? [100, 50, 100] : [300]);
@@ -28,7 +27,7 @@ interface WorkoutState {
   history: SessionHistory[]; muscleHeat: MuscleHeat[]; muscleVolume: Record<string, number>;
   nutrition: NutritionEntry[]; readiness: ReadinessScore;
   terminal: TerminalEvent[]; evolutionXP: number; watchConnected: boolean;
-  mealNotes: string; protocolNotes: string; schedule: Record<string, 'gym' | 'home' | 'rest'>;
+  mealNotes: string; schedule: Record<string, 'gym' | 'home' | 'rest'>;
   scheduleNotes: Record<string, string>; dailyProtocols: Record<string, string[]>; ghostVolume: number;
 
   setUserName: (n: string) => void; setUserStats: (a: number, w: number) => void; setSessionLimit: (s: number) => void;
@@ -53,7 +52,7 @@ export const useWorkoutStore = create<WorkoutState>()(
       history: [], muscleHeat: createEmptyHeatmap(), muscleVolume: {},
       nutrition: [], readiness: calculateReadiness(simulateHRV(), simulateSleep(), 0),
       terminal: [], evolutionXP: 0, watchConnected: false,
-      schedule: {}, scheduleNotes: {}, dailyProtocols: {}, ghostVolume: 0, mealNotes: "", protocolNotes: "",
+      schedule: {}, scheduleNotes: {}, dailyProtocols: {}, ghostVolume: 0, mealNotes: "",
 
       setUserName: (userName) => set({ userName }),
       setUserStats: (userAge, userWeight) => set({ userAge, userWeight }),
@@ -68,7 +67,7 @@ export const useWorkoutStore = create<WorkoutState>()(
       },
 
       endSession: () => {
-        const { session, history, evolutionXP, ghostVolume, muscleVolume } = get();
+        const { session, history, evolutionXP, ghostVolume } = get();
         if (!session) return;
         const newEntries = session.cards.map(c => ({
           exerciseId: c.exercise.id, date: Date.now(),
