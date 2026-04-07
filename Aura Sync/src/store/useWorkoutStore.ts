@@ -37,6 +37,7 @@ interface WorkoutState {
   evolutionXP: number;
   totalWorkouts: number;
   watchConnected: boolean;
+  mealNotes: string; // New Notepad state
 
   startSession: () => void;
   endSession: () => void;
@@ -49,18 +50,17 @@ interface WorkoutState {
   startRest: (seconds: number) => void;
   stopRest: () => void;
   addNutrition: (entry: Omit<NutritionEntry, 'id' | 'timestamp'>) => void;
+  updateMealNotes: (notes: string) => void;
   refreshReadiness: () => void;
-  connectWatch: () => Promise<void>; // Real Web Bluetooth
+  connectWatch: () => Promise<void>;
   addTerminalEvent: (message: string, type?: TerminalEvent['type']) => void;
   decayHeatmap: () => void;
   hardReset: () => void; 
 }
 
-// ── THE STORE ────────────────────────────────────────────
 export const useWorkoutStore = create<WorkoutState>()(
   persist(
     (set, get) => ({
-      // 🧼 INITIAL "CLEAN SLATE" VALUES
       session: null,
       isResting: false,
       restSeconds: 90,
@@ -72,6 +72,7 @@ export const useWorkoutStore = create<WorkoutState>()(
       evolutionXP: 0,
       totalWorkouts: 0,
       watchConnected: false,
+      mealNotes: "", 
 
       startSession: () => {
         const s: WorkoutSession = { id: `ws-${Date.now()}`, startedAt: Date.now(), cards: [] };
@@ -193,13 +194,14 @@ export const useWorkoutStore = create<WorkoutState>()(
         });
       },
 
+      updateMealNotes: (notes) => set({ mealNotes: notes }),
+
       refreshReadiness: () => {
         const weekAgo = Date.now() - 604800000;
         const weeklyStrain = get().history.filter(h => h.date > weekAgo).reduce((sum, h) => sum + h.totalVolume, 0);
         set({ readiness: calculateReadiness(simulateHRV(), simulateSleep(), weeklyStrain) });
       },
 
-      // 🛰️ REAL WEB BLUETOOTH CONNECTION
       connectWatch: async () => {
         try {
           if (!('bluetooth' in navigator)) {
@@ -209,7 +211,6 @@ export const useWorkoutStore = create<WorkoutState>()(
           const device = await (navigator as any).bluetooth.requestDevice({ filters: [{ services: ['heart_rate'] }] });
           await device.gatt.connect();
           set({ watchConnected: true, terminal: [...get().terminal, makeTerminalEvent(`Linked: ${device.name}`, 'success')] });
-          device.addEventListener('gattserverdisconnected', () => set({ watchConnected: false, terminal: [...get().terminal, makeTerminalEvent('Link Lost', 'warning')] }));
         } catch (e) {
           set({ watchConnected: false, terminal: [...get().terminal, makeTerminalEvent('Link Cancelled', 'info')] });
         }
@@ -220,14 +221,13 @@ export const useWorkoutStore = create<WorkoutState>()(
 
       hardReset: () => {
         localStorage.removeItem('aura-sync-storage');
-        set({ history: [], muscleHeat: createEmptyHeatmap(), nutrition: [], evolutionXP: 0, totalWorkouts: 0, terminal: [makeTerminalEvent('SYSTEM REFORMATTED', 'warning')], session: null, watchConnected: false });
+        set({ history: [], muscleHeat: createEmptyHeatmap(), nutrition: [], evolutionXP: 0, totalWorkouts: 0, terminal: [makeTerminalEvent('SYSTEM REFORMATTED', 'warning')], session: null, watchConnected: false, mealNotes: "" });
         window.location.reload();
       },
     }),
     {
       name: 'aura-sync-storage',
       storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({ history: state.history, muscleHeat: state.muscleHeat, nutrition: state.nutrition, readiness: state.readiness, terminal: state.terminal.slice(-30), evolutionXP: state.evolutionXP, totalWorkouts: state.totalWorkouts, watchConnected: state.watchConnected, session: state.session }),
     }
   )
 );
