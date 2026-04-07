@@ -5,6 +5,7 @@ import { createEmptyHeatmap, addHeatFromExercise, applyDecay } from '../engine/h
 import { calculateReadiness, simulateHRV, simulateSleep } from '../engine/readiness';
 import { isPR } from '../engine/overload';
 
+// 🔊 Tactical Audio Engine
 export const triggerAlert = (type: 'success' | 'warning') => {
   try {
     if ('vibrate' in navigator) navigator.vibrate(type === 'success' ? [100, 50, 100] : [300]);
@@ -32,7 +33,7 @@ interface WorkoutState {
   activeSetIndex: number;
   history: SessionHistory[];
   muscleHeat: MuscleHeat[];
-  muscleVolume: Record<string, number>;
+  muscleVolume: Record<string, number>; 
   nutrition: NutritionEntry[];
   readiness: ReadinessScore;
   terminal: TerminalEvent[];
@@ -40,13 +41,13 @@ interface WorkoutState {
   watchConnected: boolean;
   schedule: Record<string, 'gym' | 'home' | 'rest'>;
   scheduleNotes: Record<string, string>;
-  dailyProtocols: Record<string, string[]>; // day -> exerciseIds
+  dailyProtocols: Record<string, string[]>; 
   ghostVolume: number;
 
   setUserName: (n: string) => void;
   setUserStats: (a: number, w: number) => void;
   setSessionLimit: (s: number) => void;
-  startSession: () => void;
+  startSession: (initialExercises?: Exercise[]) => void;
   endSession: () => void;
   addExercise: (ex: Exercise) => void;
   removeExercise: (id: string) => void;
@@ -84,32 +85,24 @@ export const useWorkoutStore = create<WorkoutState>()(
       setUserStats: (userAge, userWeight) => set({ userAge, userWeight }),
       setSessionLimit: (sessionLimit) => set({ sessionLimit }),
 
-      startSession: () => {
-        const today = new Date().toISOString().split('T')[0];
-        const dayOfWeek = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-        const protocolIds = get().dailyProtocols[dayOfWeek] || [];
-        const { workoutRegistry } = require('../data/workoutRegistry');
-        
-        const initialCards: ExerciseCard[] = protocolIds.map(id => {
-          const ex = workoutRegistry.find((e:any) => e.id === id);
-          return {
-            id: `c-${Date.now()}-${id}`,
-            exercise: ex,
-            sets: [1,2,3].map(i => ({ id: `s-${Date.now()}-${id}-${i}`, weight: ex.defaultWeight, reps: ex.defaultReps, completed: false }))
-          };
-        });
-
+      startSession: (initialExercises) => {
+        const initialCards: ExerciseCard[] = (initialExercises || []).map(ex => ({
+          id: `c-${Date.now()}-${ex.id}`,
+          exercise: ex,
+          sets: [1,2,3].map(i => ({ id: `s-${Date.now()}-${ex.id}-${i}`, weight: ex.defaultWeight, reps: ex.defaultReps, completed: false }))
+        }));
         set({ session: { id: `ws-${Date.now()}`, startedAt: Date.now(), cards: initialCards } });
       },
 
       endSession: () => {
-        const { session, history, evolutionXP, ghostVolume } = get();
+        const { session, history, evolutionXP, ghostVolume, muscleVolume } = get();
         if (!session) return;
         const newEntries = session.cards.map(c => ({
           exerciseId: c.exercise.id, date: Date.now(),
           sets: c.sets.filter(s => s.completed).map(s => ({ weight: s.weight, reps: s.reps })),
           totalVolume: c.sets.filter(s => s.completed).reduce((sum, s) => sum + s.weight * s.reps, 0)
         })).filter(e => e.sets.length > 0);
+        
         const sessionVol = newEntries.reduce((s, e) => s + e.totalVolume, 0);
         set({
           session: null, history: [...history, ...newEntries],
@@ -154,13 +147,11 @@ export const useWorkoutStore = create<WorkoutState>()(
       addNutrition: (n) => set({ nutrition: [...get().nutrition, { ...n, id: `n-${Date.now()}`, timestamp: Date.now() }], evolutionXP: get().evolutionXP + 5 }),
       updateSchedule: (date, type) => set({ schedule: { ...get().schedule, [date]: type } }),
       updateDateNote: (date, note) => set({ scheduleNotes: { ...get().scheduleNotes, [date]: note } }),
-      
       toggleDailyExercise: (day, id) => {
         const current = get().dailyProtocols[day] || [];
         const next = current.includes(id) ? current.filter(x => x !== id) : [...current, id];
         set({ dailyProtocols: { ...get().dailyProtocols, [day]: next } });
       },
-
       connectWatch: async () => {
         try {
           const device = await (navigator as any).bluetooth.requestDevice({ filters: [{ services: ['heart_rate'] }] });
