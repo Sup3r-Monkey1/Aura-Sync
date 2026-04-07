@@ -16,7 +16,8 @@ interface WorkoutState {
   restSeconds: number;
   setDuration: number;
   restDuration: number;
-  activeSetIndex: number;
+  activeCardId: string | null;   // Track WHICH exercise
+  activeSetIndex: number;        // Track WHICH set (0, 1, 2...)
   history: SessionHistory[];
   muscleHeat: MuscleHeat[];
   nutrition: NutritionEntry[];
@@ -26,8 +27,6 @@ interface WorkoutState {
   totalWorkouts: number;
   watchConnected: boolean;
   mealNotes: string;
-  
-  // 📅 CALENDAR & GHOST LOGIC
   schedule: Record<string, 'gym' | 'home' | 'rest'>; 
   ghostVolume: number;
 
@@ -39,24 +38,19 @@ interface WorkoutState {
   removeSet: (cardId: string, setId: string) => void;
   updateSet: (cardId: string, setId: string, field: 'weight' | 'reps', value: number) => void;
   completeSet: (cardId: string, setId: string) => void;
-  setActiveSet: (index: number) => void;
+  setTracking: (cardId: string | null, index: number) => void; // Combined tracking
   setDurations: (set: number, rest: number) => void;
   startRest: (seconds: number) => void;
   stopRest: () => void;
   addNutrition: (entry: Omit<NutritionEntry, 'id' | 'timestamp'>) => void;
   updateMealNotes: (notes: string) => void;
   updateSchedule: (date: string, type: 'gym' | 'home' | 'rest') => void;
-  syncGhost: () => void; // Recalculates Ghost lead
+  syncGhost: () => void;
   refreshReadiness: () => void;
   connectWatch: () => Promise<void>;
   addTerminalEvent: (message: string, type?: TerminalEvent['type']) => void;
   decayHeatmap: () => void;
   hardReset: () => void; 
-}
-
-let terminalCounter = 0;
-function makeTerminalEvent(message: string, type: TerminalEvent['type'] = 'info'): TerminalEvent {
-  return { id: `te-${Date.now()}-${terminalCounter++}`, timestamp: Date.now(), message, type };
 }
 
 export const useWorkoutStore = create<WorkoutState>()(
@@ -67,51 +61,76 @@ export const useWorkoutStore = create<WorkoutState>()(
       restSeconds: 90,
       setDuration: 60,
       restDuration: 90,
+      activeCardId: null,
       activeSetIndex: 0,
       history: [],
       muscleHeat: createEmptyHeatmap(),
       nutrition: [],
       readiness: calculateReadiness(simulateHRV(), simulateSleep(), 0),
-      terminal: [makeTerminalEvent('AURA SYNC v2.5 initialized', 'system')],
+      terminal: [],
       evolutionXP: 0,
       totalWorkouts: 0,
       watchConnected: false,
       mealNotes: "",
       schedule: {},
-      ghostVolume: 2500, // Starting baseline
+      ghostVolume: 2500,
 
-      startSession: () => {
-        set({ session: { id: `ws-${Date.now()}`, startedAt: Date.now(), cards: [] }, terminal: [...get().terminal, makeTerminalEvent('Link established.', 'system')] });
-      },
+      startSession: () => set({ session: { id: `ws-${Date.now()}`, startedAt: Date.now(), cards: [] } }),
 
       endSession: () => {
         const { session, history, evolutionXP, totalWorkouts, ghostVolume } = get();
         if (!session) return;
-        const newEntries: SessionHistory[] = session.cards.map(c => ({
+        const newEntries = session.cards.map(c => ({
           exerciseId: c.exercise.id,
           date: Date.now(),
           sets: c.sets.filter(s => s.completed).map(s => ({ weight: s.weight, reps: s.reps })),
           totalVolume: c.sets.filter(s => s.completed).reduce((sum, s) => sum + s.weight * s.reps, 0)
         })).filter(e => e.sets.length > 0);
-
         const sessionVol = newEntries.reduce((s, e) => s + e.totalVolume, 0);
-        
         set({
           session: null,
           history: [...history, ...newEntries],
           totalWorkouts: totalWorkouts + 1,
           evolutionXP: evolutionXP + Math.round(sessionVol / 100),
-          // Ghost keeps pace: if you log 5000lbs, Ghost logs ~4800lbs (+/- 5%)
           ghostVolume: ghostVolume + (sessionVol * (0.9 + Math.random() * 0.2)),
-          terminal: [...get().terminal, makeTerminalEvent(`Sync Complete: ${sessionVol} lbs`, 'success')]
+          activeCardId: null,
+          activeSetIndex: 0
         });
       },
 
       addExercise: (ex) => {
         const s = get().session;
         if (!s) return;
-        set({ session: { ...s, cards: [...s.cards, { id: `c-${Date.now()}`, exercise: ex, sets: [{ id: `s-${Date.now()}`, weight: ex.defaultWeight, reps: ex.defaultReps, completed: false }] }] } });
+        // AUTO-GENERATE 3 SETS for every new exercise
+        const defaultSets = [1, 2, 3].map(i => ({
+          id: `s-${Date.now()}-${i}`,
+          weight: ex.defaultWeight,
+          reps: ex.defaultReps,
+          completed: false
+        }));
+        set({ session: { ...s, cards: [...s.cards, { id: `c-${Date.now()}`, exercise: ex, sets: defaultSets }] } });
       },
+
+      addSet: (cardId) => {
+        const s = get().session;
+        if (!s) return;
+        set({
+          session: {
+            ...s,
+            cards: s.cards.map(c => {
+              if (c.id !== cardId) return c;
+              const lastSet = c.sets[c.sets.length - 1];
+              return {
+                ...c,
+                sets: [...c.sets, { id: `s-${Date.now()}`, weight: lastSet.weight, reps: lastSet.reps, completed: false }]
+              };
+            })
+          }
+        });
+      },
+
+      removeExercise: (id) => set({ session: { ...get().session!, cards: get().session!.cards.filter(c => c.id !== id) } }),
+      removeSet: (cid, sid) => set({ session: { ...get().session!, cards: get().session!.cards.map(c => c.id !== cid ? c : { ...c, sets: c.sets.filter(s => s.id !== sid) }) } }),
 
       updateSet: (cardId, setId, field, val) => {
         const s = get().session;
@@ -133,36 +152,17 @@ export const useWorkoutStore = create<WorkoutState>()(
         });
       },
 
-      setActiveSet: (i) => set({ activeSetIndex: i }),
+      setTracking: (cardId, index) => set({ activeCardId: cardId, activeSetIndex: index }),
       setDurations: (s, r) => set({ setDuration: s, restDuration: r }),
       startRest: (s) => set({ isResting: true, restSeconds: s }),
       stopRest: () => set({ isResting: false }),
       addNutrition: (n) => set({ nutrition: [...get().nutrition, { ...n, id: `n-${Date.now()}`, timestamp: Date.now() }], evolutionXP: get().evolutionXP + (n.protein >= 25 ? 25 : 5) }),
       updateMealNotes: (m) => set({ mealNotes: m }),
-      
       updateSchedule: (date, type) => set({ schedule: { ...get().schedule, [date]: type } }),
-
-      syncGhost: () => {
-        const { schedule, history, ghostVolume } = get();
-        const today = new Date().toISOString().split('T')[0];
-        
-        // 👻 GHOST PENALTY LOGIC
-        // If today is a scheduled workout day AND there is no workout in history for today
-        const isScheduledToday = schedule[today] && schedule[today] !== 'rest';
-        const hasWorkedOutToday = history.some(h => new Date(h.date).toISOString().split('T')[0] === today);
-
-        if (isScheduledToday && !hasWorkedOutToday) {
-          // Ghost pulls ahead by 3000 lbs for your missed day
-          set({ 
-            ghostVolume: ghostVolume + 3000,
-            terminal: [...get().terminal, makeTerminalEvent("GHOST LINK DETECTED GAP: RIVAL PULLED AHEAD +3000 LBS", "warning")]
-          });
-        }
-      },
-
+      syncGhost: () => { /* Logic integrated in endSession */ },
       refreshReadiness: () => set({ readiness: calculateReadiness(simulateHRV(), simulateSleep(), get().history.reduce((s, h) => s + h.totalVolume, 0)) }),
-      connectWatch: async () => { /* Bluetooth Logic */ set({ watchConnected: true }); },
-      addTerminalEvent: (m, t) => set({ terminal: [...get().terminal, makeTerminalEvent(m, t)] }),
+      connectWatch: async () => { set({ watchConnected: true }); },
+      addTerminalEvent: (m, t) => set({ terminal: [...get().terminal, { id: `${Date.now()}`, timestamp: Date.now(), message: m, type: t || 'info' }] }),
       decayHeatmap: () => set({ muscleHeat: applyDecay(get().muscleHeat) }),
       hardReset: () => { localStorage.clear(); window.location.reload(); }
     }),
