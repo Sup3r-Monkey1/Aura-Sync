@@ -1,8 +1,8 @@
 import { motion } from 'framer-motion';
-import { ShieldAlert, Heart, Activity, ShieldCheck, Watch, Zap } from 'lucide-react';
+import { Heart, Activity, ShieldCheck, Watch, Zap } from 'lucide-react';
 import { useWorkoutStore } from '../store/useWorkoutStore';
 
-const EVOLUTION_TIERS = [
+const TIERS = [
   { label: 'VOID', color: '#1A1A1B', minVol: -1 },
   { label: 'PULSE', color: '#00D1FF', minVol: 5000 },
   { label: 'NEBULA', color: '#BD00FF', minVol: 25000 },
@@ -11,92 +11,71 @@ const EVOLUTION_TIERS = [
 ];
 
 export default function EvolutionRank() {
-  const { evolutionXP, history, muscleHeat, muscleVolume, watchConnected, connectWatch, session, activeCardId } = useWorkoutStore();
+  const { history, muscleHeat, muscleVolume, watchConnected, connectWatch, session } = useWorkoutStore();
 
-  const getMuscleColor = (muscle: string) => {
-    const vol = muscleVolume[muscle] || 0;
-    const tier = [...EVOLUTION_TIERS].reverse().find(t => vol >= t.minVol) || EVOLUTION_TIERS[0];
-    return tier.color;
+  const getMColor = (m: string) => {
+    const vol = muscleVolume[m] || 0;
+    return ([...TIERS].reverse().find(t => vol >= t.minVol) || TIERS[0]).color;
   };
 
-  const getIntensityGlow = (muscle: string) => {
-    if (!session) return "0px 0px 0px transparent";
-    const heat = muscleHeat.find(m => m.group === muscle)?.heat || 0;
-    const isPulsing = heat > 50;
-    const isMax = heat > 85;
-    
-    if (isMax) return `0 0 25px ${getMuscleColor(muscle)}`;
-    if (isPulsing) return `0 0 10px ${getMuscleColor(muscle)}`;
-    return "none";
+  const getMGlow = (m: string) => {
+    if (!session) return "none";
+    const h = muscleHeat.find(x => x.group === m)?.heat || 0;
+    return h > 50 ? `drop-shadow(0 0 ${h/5}px ${getMColor(m)})` : "none";
   };
 
   return (
     <div className="min-h-screen bg-[#050505] p-4 pt-12 pb-24">
       <div className="px-2 mb-8">
-        <h2 className="text-sm font-black uppercase tracking-[0.4em] text-white/70 italic">Evolution_Anatomy</h2>
-        <p className="text-[10px] text-white/20 mt-1 uppercase font-mono tracking-widest font-black">
-          AURA_TIER: <span className="text-cobalt">{evolutionXP < 1000 ? 'DORMANT' : evolutionXP < 5000 ? 'AWAKENED' : 'RADIANT'}</span>
-        </p>
+        <h2 className="text-sm font-black uppercase tracking-[0.4em] text-white/70 italic underline decoration-cobalt underline-offset-8">Evolution_Anatomy</h2>
       </div>
 
-      <div className="glass p-10 mb-8 flex flex-col items-center relative overflow-hidden border-t border-white/5">
-        <div className="relative w-48 h-80 flex justify-center">
-           <svg viewBox="0 0 100 200" className="w-full h-full">
-              {/* HEAD */}
-              <circle cx="50" cy="25" r="12" fill={getMuscleColor('core')} className="transition-all duration-1000" />
-              {/* CHEST */}
-              <rect x="35" y="42" width="30" height="20" fill={getMuscleColor('chest')} style={{ filter: `drop-shadow(${getIntensityGlow('chest')})` }} className="transition-all duration-1000" />
-              {/* LATS / BACK */}
-              <path d="M35 45 L25 75 L35 75 Z" fill={getMuscleColor('back')} />
-              <path d="M65 45 L75 75 L65 75 Z" fill={getMuscleColor('back')} />
-              {/* ARMS */}
-              <rect x="22" y="45" width="8" height="40" fill={getMuscleColor('biceps')} className="transition-all duration-1000" />
-              <rect x="70" y="45" width="8" height="40" fill={getMuscleColor('biceps')} className="transition-all duration-1000" />
-              {/* CORE */}
-              <rect x="40" y="65" width="20" height="25" fill={getMuscleColor('core')} className="transition-all duration-1000" />
-              {/* LEGS */}
-              <rect x="35" y="95" width="12" height="60" fill={getMuscleColor('legs')} style={{ filter: `drop-shadow(${getIntensityGlow('legs')})` }} className="transition-all duration-1000" />
-              <rect x="53" y="95" width="12" height="60" fill={getMuscleColor('legs')} style={{ filter: `drop-shadow(${getIntensityGlow('legs')})` }} className="transition-all duration-1000" />
+      <div className="glass-strong p-10 mb-8 flex flex-col items-center relative overflow-hidden">
+        <div className="relative w-56 h-96">
+           <svg viewBox="0 0 200 400" className="w-full h-full">
+              {/* DETAILED HEAD */}
+              <path d="M85 40 Q100 20 115 40 Q115 65 100 70 Q85 65 85 40 Z" fill={getMColor('core')} />
+              {/* CHEST/TORSO PEAK DEFINITION */}
+              <path d="M60 80 Q100 70 140 80 L135 150 Q100 160 65 150 Z" fill={getMColor('chest')} style={{ filter: getMGlow('chest') }} className="transition-all duration-1000" />
+              {/* LATS */}
+              <path d="M60 85 L40 140 Q60 145 65 140 Z" fill={getMColor('back')} />
+              <path d="M140 85 L160 140 Q140 145 135 140 Z" fill={getMColor('back')} />
+              {/* ARMS - CONTOURED */}
+              <path d="M45 85 Q30 85 30 180 L45 180 Z" fill={getMColor('biceps')} />
+              <path d="M155 85 Q170 85 170 180 L155 180 Z" fill={getMColor('biceps')} />
+              {/* LEGS - QUAD DEFINITION */}
+              <path d="M65 160 Q55 240 60 360 L90 360 L95 160 Z" fill={getMColor('quads')} style={{ filter: getMGlow('quads') }} />
+              <path d="M135 160 Q145 240 140 360 L110 360 L105 160 Z" fill={getMColor('quads')} style={{ filter: getMGlow('quads') }} />
            </svg>
-
-           {session && (
-             <div className="absolute top-0 right-0 p-2 bg-cobalt text-black text-[8px] font-black uppercase animate-pulse">Live_Sync_Active</div>
-           )}
         </div>
 
-        <div className="mt-8 grid grid-cols-5 gap-1 w-full">
-           {EVOLUTION_TIERS.map(t => (
-             <div key={t.label} className="text-center">
-                <div className="h-1 w-full mb-1" style={{ backgroundColor: t.color }} />
-                <div className="text-[7px] font-black text-white/30">{t.label}</div>
+        <div className="w-full mt-10 grid grid-cols-5 gap-2">
+           {TIERS.map(t => (
+             <div key={t.label} className="flex flex-col items-center">
+                <div className="h-1 w-full" style={{ backgroundColor: t.color }} />
+                <span className="text-[6px] font-black text-white/30 mt-1">{t.label}</span>
              </div>
            ))}
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 mb-8 font-mono">
-         <div className="glass p-5 text-center">
-            <Heart size={16} className={watchConnected ? "text-red-500 animate-pulse" : "text-white/5"} />
-            <div className="text-xl font-black mt-2 text-white">{watchConnected ? '64bpm' : '--'}</div>
-            <div className="text-[8px] text-white/20 uppercase font-bold tracking-widest">Sync_HR</div>
-         </div>
-         <div className="glass p-5 text-center border-b border-cobalt/40">
-            <Activity size={16} className="text-cobalt" />
-            <div className="text-xl font-black mt-2 text-white">{history.length}</div>
-            <div className="text-[8px] text-white/20 uppercase font-bold tracking-widest">History</div>
-         </div>
-         <div className="glass p-5 text-center">
-            <ShieldCheck size={16} className="text-terminal" />
-            <div className="text-xl font-black mt-2 text-white">{Math.min(100, (history.length * 4))}%</div>
-            <div className="text-[8px] text-white/20 uppercase font-bold tracking-widest">Verified</div>
-         </div>
+      <div className="grid grid-cols-3 gap-3 mb-10">
+         <StatItem icon={<Heart size={14}/>} label="HRV" val={watchConnected ? "64ms" : "--"} color={watchConnected ? "text-red-500" : "text-white/10"} />
+         <StatItem icon={<Activity size={14}/>} label="Workouts" val={history.length} color="text-cobalt" />
+         <StatItem icon={<ShieldCheck size={14}/>} label="Verified" val={`${Math.min(100, history.length*5)}%`} color="text-terminal" />
       </div>
 
-      {!watchConnected && (
-         <button onClick={connectWatch} className="w-full py-5 bg-white/5 border border-white/10 text-white/60 font-black uppercase text-[10px] tracking-[0.4em] active:bg-cobalt active:text-black transition-all">
-           Link Hardware Sensor
-         </button>
-      )}
+      {!watchConnected && <button onClick={connectWatch} className="w-full py-5 border border-cobalt/20 bg-cobalt/5 text-cobalt text-[10px] font-black uppercase tracking-[0.4em]">Initialize Hardware Link</button>}
+    </div>
+  );
+}
+
+function StatItem({ icon, label, val, color }: any) {
+  return (
+    <div className="glass p-4 text-center">
+      <div className={`${color} flex justify-center mb-2`}>{icon}</div>
+      <div className="text-xl font-black text-white">{val}</div>
+      <div className="text-[8px] text-white/30 uppercase font-bold tracking-widest">{label}</div>
     </div>
   );
 }
