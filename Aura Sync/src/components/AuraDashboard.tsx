@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Brain, Activity, Flame, Zap, Watch, Edit2, Timer, Lock, ShieldCheck } from 'lucide-react';
+import { Brain, Activity, Flame, Zap, Watch, Edit2, Timer, Lock, ShieldCheck, Check, Clock } from 'lucide-react';
 import { useWorkoutStore } from '../store/useWorkoutStore';
-import { getZoneColor, getZoneLabel } from '../engine/readiness';
+import { getZoneColor } from '../engine/readiness';
 import { workoutRegistry } from '../data/workoutRegistry';
 import BlackBoxTerminal from './BlackBoxTerminal';
 
@@ -31,8 +31,9 @@ export default function AuraDashboard() {
 
   return (
     <div className="min-h-screen bg-[#050505] pb-24 overflow-x-hidden">
+      {/* 👤 HEADER */}
       <div className="px-4 pt-12 pb-6 flex justify-between items-start">
-        <div onClick={() => setIsEditingProfile(true)} className="cursor-pointer">
+        <div onClick={() => setIsEditingProfile(true)}>
           <div className="flex items-center gap-2 mb-1">
             <div className="w-2 h-2 bg-cobalt animate-pulse" />
             <h1 className="text-lg font-black tracking-widest text-white/90 uppercase">{userName}</h1>
@@ -45,6 +46,7 @@ export default function AuraDashboard() {
         </div>
       </div>
 
+      {/* ⏱️ SESSION TIMER */}
       <div className="px-4 mb-6">
         <div className="glass p-5 border-l-2 border-cobalt">
           <div className="flex justify-between items-center mb-4">
@@ -64,6 +66,7 @@ export default function AuraDashboard() {
         </div>
       </div>
 
+      {/* 🎯 SUGGESTIONS */}
       <div className="px-4 mb-6">
         <div className="glass p-5">
            <div className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] mb-4">Tactical Suggestions</div>
@@ -77,7 +80,7 @@ export default function AuraDashboard() {
                 {workoutRegistry.filter(ex => ex.category === targetMuscle).slice(0, 2).map(ex => (
                   <div key={ex.id} className="flex justify-between items-center p-3 bg-white/[0.02] border-r-2 border-cobalt">
                     <span className="text-[11px] font-bold text-white/70 uppercase">{ex.name}</span>
-                    <span className="text-[8px] text-cobalt font-mono">LINK_READY</span>
+                    <span className="text-[8px] text-cobalt font-mono uppercase">Sync_Ready</span>
                   </div>
                 ))}
              </div>
@@ -85,6 +88,7 @@ export default function AuraDashboard() {
         </div>
       </div>
 
+      {/* 🛰️ BIOMETRICS */}
       <div className="px-4 mb-6">
         {watchConnected ? (
           <div className="glass p-5 border-l-2 border-terminal flex justify-between items-start">
@@ -96,20 +100,20 @@ export default function AuraDashboard() {
         )}
       </div>
 
-      {!session && <div className="px-4 mb-8"><motion.button whileTap={{ scale: 0.97 }} onClick={() => startSession()} className="w-full py-5 bg-cobalt text-black font-black text-sm uppercase tracking-widest glow-cobalt">Initiate Link</motion.button></div>}
+      {!session && <div className="px-4 mb-8"><motion.button whileTap={{ scale: 0.97 }} onClick={() => startSession()} className="w-full py-5 bg-cobalt text-black font-black text-sm uppercase tracking-widest glow-cobalt">Initiate Protocol</motion.button></div>}
       <div className="px-4"><BlackBoxTerminal /></div>
 
       <AnimatePresence>
         {isEditingProfile && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] bg-black/95 p-8 flex flex-col justify-center items-center">
              <div className="w-full max-w-xs space-y-6">
-                <h2 className="text-2xl font-black italic uppercase text-white mb-8 border-l-4 border-cobalt pl-4">Protocol Identity</h2>
+                <h2 className="text-2xl font-black italic uppercase text-white mb-8 border-l-4 border-cobalt pl-4 font-mono">Protocol Identity</h2>
                 <div className="space-y-4">
-                   <label className="block"><span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Name</span><input className="w-full bg-white/5 p-4 border border-white/10 text-white outline-none" value={userName} onChange={(e)=>setUserName(e.target.value)}/></label>
-                   <label className="block"><span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Age</span><input type="number" className="w-full bg-white/5 p-4 border border-white/10 text-white outline-none" value={userAge} onChange={(e)=>setUserStats(Number(e.target.value), userWeight)}/></label>
-                   <label className="block"><span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Weight (Lbs)</span><input type="number" className="w-full bg-white/5 p-4 border border-white/10 text-white outline-none" value={userWeight} onChange={(e)=>setUserStats(userAge, Number(e.target.value))}/></label>
+                   <div className="block"><span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Name</span><input className="w-full bg-white/5 p-4 border border-white/10 text-white outline-none" value={userName} onChange={(e)=>setUserName(e.target.value)}/></div>
+                   <div className="block"><span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Age</span><input type="number" className="w-full bg-white/5 p-4 border border-white/10 text-white outline-none" value={userAge} onChange={(e)=>setUserStats(Number(e.target.value), userWeight)}/></div>
+                   <div className="block"><span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Weight (Lbs)</span><input type="number" className="w-full bg-white/5 p-4 border border-white/10 text-white outline-none" value={userWeight} onChange={(e)=>setUserStats(userAge, Number(e.target.value))}/></div>
                 </div>
-                <button onClick={()=>setIsEditingProfile(false)} className="w-full py-4 bg-cobalt text-black font-black uppercase mt-8 tracking-widest">Authorize Changes</button>
+                <button onClick={()=>setIsEditingProfile(false)} className="w-full py-4 bg-cobalt text-black font-black uppercase mt-8 tracking-widest">Confirm Data</button>
              </div>
           </motion.div>
         )}
