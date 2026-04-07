@@ -101,6 +101,7 @@ export const useWorkoutStore = create<WorkoutState>()(
         set({
           session: null,
           history: [...history, ...newEntries],
+          totalWorkouts: (get().totalWorkouts || 0) + 1,
           evolutionXP: evolutionXP + Math.round(sessionVol / 100),
           ghostVolume: ghostVolume + (sessionVol * (0.95 + Math.random() * 0.1)),
           activeCardId: null, activeSetIndex: 0
@@ -122,10 +123,7 @@ export const useWorkoutStore = create<WorkoutState>()(
             cards: s.cards.map(c => {
               if (c.id !== cardId) return c;
               const lastSet = c.sets[c.sets.length - 1];
-              return {
-                ...c,
-                sets: [...c.sets, { id: `s-${Date.now()}`, weight: lastSet?.weight || 0, reps: lastSet?.reps || 0, completed: false }]
-              };
+              return { ...c, sets: [...c.sets, { id: `s-${Date.now()}`, weight: lastSet?.weight || 0, reps: lastSet?.reps || 0, completed: false }] };
             })
           }
         });
