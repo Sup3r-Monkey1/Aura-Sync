@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, X, Check, Clock, Trash2, Power, RotateCcw, Cpu, Dumbbell as DbIcon, ShieldCheck, Edit3, Utensils } from 'lucide-react';
-import { useWorkoutStore } from '../store/useWorkoutStore';
+import { Plus, X, Check, Clock, Trash2, Power, RotateCcw, Cpu, Dumbbell as DbIcon, ShieldCheck, Edit3, Utensils, Zap, Activity } from 'lucide-react';
+import { useWorkoutStore, triggerAlert } from '../store/useWorkoutStore';
 import { workoutRegistry } from '../data/workoutRegistry';
 
 export default function GhostLog() {
   const { session, endSession, removeExercise, addSet, removeSet, updateSet, completeSet, setDuration, restDuration, activeCardId, activeSetIndex, setTracking, dailyProtocols, toggleDailyExercise, startSession, scheduleNotes, mealNotes, updateMealNotes } = useWorkoutStore();
   
   const [activeDay, setActiveDay] = useState('monday');
-  const [activeTab, setActiveTab] = useState<'machine' | 'free'>('machine');
+  const [activeTab, setActiveTab] = useState<'machines' | 'hardware' | 'cardio'>('machines');
   const [timerState, setTimerState] = useState<'IDLE' | 'SET' | 'REST'>('IDLE');
   const [timeLeft, setTimeLeft] = useState(0);
   const [isPaused, setIsPaused] = useState(true);
@@ -24,18 +24,18 @@ export default function GhostLog() {
       if (timerState === 'SET') {
         const card = session?.cards.find(c => c.id === activeCardId);
         if (card) completeSet(activeCardId!, card.sets[activeSetIndex].id);
-        setTimerState('REST'); setTimeLeft(restDuration);
+        setTimerState('REST'); setTimeLeft(restDuration); triggerAlert('success');
       } else if (timerState === 'REST') {
         const card = session?.cards.find(c => c.id === activeCardId);
         if (card && activeSetIndex + 1 < card.sets.length) {
-          setTracking(activeCardId!, activeSetIndex + 1); setTimerState('SET'); setTimeLeft(setDuration);
+          setTracking(activeCardId!, activeSetIndex + 1); setTimerState('SET'); setTimeLeft(setDuration); triggerAlert('warning');
         } else {
-          setTimerState('IDLE'); setIsPaused(true); setTracking(null, 0);
+          setTimerState('IDLE'); setIsPaused(true); setTracking(null, 0); triggerAlert('success');
         }
       }
     }
     return () => clearInterval(interval);
-  }, [timeLeft, isPaused, timerState]);
+  }, [timeLeft, isPaused, timerState, session, activeCardId, activeSetIndex]);
 
   const handleLaunch = () => {
     const ids = dailyProtocols[activeDay] || [];
@@ -44,45 +44,61 @@ export default function GhostLog() {
   };
 
   if (!session) return (
-    <div className="min-h-screen bg-[#050505] p-6 pt-16 pb-24 overflow-y-auto no-scrollbar">
-      <h2 className="text-xl font-black italic text-white uppercase mb-8">System_Config</h2>
+    <div className="min-h-screen bg-[#050505] p-4 pt-12 pb-32 overflow-y-auto no-scrollbar">
+      <div className="flex items-center gap-3 mb-8 px-2">
+        <div className="w-2 h-6 bg-cobalt" />
+        <h2 className="text-xl font-black italic text-white uppercase tracking-tighter">Sovereign_Protocol</h2>
+      </div>
       
-      {/* DAILY MATRIX */}
-      <div className="glass p-5 mb-6 border-l-2 border-cobalt">
-        <div className="flex gap-1 overflow-x-auto no-scrollbar mb-6">
+      {/* TACTICAL MATRIX CONFIG */}
+      <div className="glass-strong p-6 mb-8 border-t border-white/10">
+        <div className="flex gap-1 overflow-x-auto no-scrollbar mb-8">
           {days.map(d => (
-            <button key={d} onClick={() => setActiveDay(d)} className={`px-4 py-2 text-[8px] font-black uppercase border transition-all ${activeDay === d ? 'bg-cobalt text-black border-cobalt shadow-[0_0_15px_#2563eb]' : 'bg-white/5 border-white/10 text-white/40'}`}>
+            <button key={d} onClick={() => setActiveDay(d)} className={`px-4 py-2 text-[10px] font-black uppercase border transition-all ${activeDay === d ? 'bg-cobalt text-black border-cobalt shadow-[0_0_15px_#2563eb]' : 'bg-white/5 border-white/10 text-white/30'}`}>
               {d.slice(0,3)}
             </button>
           ))}
         </div>
-        <div className="flex gap-4 mb-4 border-b border-white/5 pb-2">
-          <button onClick={() => setActiveTab('machine')} className={`text-[10px] font-black uppercase flex items-center gap-2 ${activeTab === 'machine' ? 'text-cobalt' : 'text-white/20'}`}><Cpu size={12}/> Machines</button>
-          <button onClick={() => setActiveTab('free')} className={`text-[10px] font-black uppercase flex items-center gap-2 ${activeTab === 'free' ? 'text-white' : 'text-white/20'}`}><DbIcon size={12}/> Hardware</button>
+
+        <div className="flex gap-4 mb-6 px-1">
+          <button onClick={() => setActiveTab('machines')} className={`text-[10px] font-black uppercase flex items-center gap-2 ${activeTab === 'machines' ? 'text-cobalt text-glow-cobalt' : 'text-white/20'}`}><Cpu size={14}/> Machines</button>
+          <button onClick={() => setActiveTab('hardware')} className={`text-[10px] font-black uppercase flex items-center gap-2 ${activeTab === 'hardware' ? 'text-white' : 'text-white/20'}`}><DbIcon size={14}/> Hardware</button>
+          <button onClick={() => setActiveTab('cardio')} className={`text-[10px] font-black uppercase flex items-center gap-2 ${activeTab === 'cardio' ? 'text-magenta' : 'text-white/20'}`}><Zap size={14}/> Cardio</button>
         </div>
-        <div className="grid grid-cols-1 gap-2 max-h-64 overflow-y-auto no-scrollbar pr-2 mb-6">
-          {workoutRegistry.filter(ex => (activeTab === 'machine' ? ex.isMachine : !ex.isMachine)).map(ex => {
-            const isSelected = dailyProtocols[activeDay]?.includes(ex.id);
-            return (
-              <button key={ex.id} onClick={() => toggleDailyExercise(activeDay, ex.id)} className={`flex justify-between items-center p-3 border-r-2 ${isSelected ? 'bg-cobalt/10 border-cobalt' : 'bg-white/[0.01] border-white/5'}`}>
-                <span className={`text-[10px] font-bold uppercase ${isSelected ? 'text-white' : 'text-white/30'}`}>{ex.name}</span>
-                {isSelected && <ShieldCheck size={12} className="text-cobalt" />}
-              </button>
-            );
-          })}
+
+        <div className="grid grid-cols-1 gap-2 max-h-[40vh] overflow-y-auto no-scrollbar mb-8">
+          {workoutRegistry
+            .filter(ex => {
+              if (activeTab === 'machines') return ex.isMachine && ex.type === 'strength';
+              if (activeTab === 'hardware') return !ex.isMachine;
+              return ex.type === 'cardio' || ex.type === 'functional';
+            })
+            .map(ex => {
+              const isSelected = dailyProtocols[activeDay]?.includes(ex.id);
+              return (
+                <button key={ex.id} onClick={() => toggleDailyExercise(activeDay, ex.id)} className={`flex justify-between items-center p-4 border-l-2 transition-all ${isSelected ? 'bg-cobalt/10 border-cobalt shadow-inner' : 'bg-white/[0.01] border-white/5'}`}>
+                  <div className="text-left">
+                    <span className={`text-[10px] font-black uppercase block ${isSelected ? 'text-white' : 'text-white/30'}`}>{ex.name}</span>
+                    <span className="text-[7px] text-white/10 uppercase tracking-widest">{ex.primaryMuscles.join(', ')}</span>
+                  </div>
+                  {isSelected && <ShieldCheck size={14} className="text-cobalt animate-pulse" />}
+                </button>
+              );
+            })}
         </div>
-        <button onClick={handleLaunch} className="w-full py-5 bg-cobalt text-black font-black uppercase text-xs tracking-[0.4em] glow-cobalt">Initialize Bio-Sync</button>
+
+        <button onClick={handleLaunch} className="w-full py-5 bg-cobalt text-black font-black uppercase text-xs tracking-[0.4em] shadow-[0_0_30px_#2563eb40] active:scale-95 transition-all">Synchronize Daily Protocol</button>
       </div>
 
       {/* SYNCED NOTEPADS */}
-      <div className="space-y-4">
+      <div className="grid gap-4">
          <div className="glass p-5 border-l-2 border-magenta">
-            <div className="flex items-center gap-2 mb-3 text-[10px] font-black text-magenta uppercase"><Edit3 size={14}/> Schedule_Notes</div>
-            <p className="text-xs text-white/40 font-mono italic leading-relaxed">{scheduleNotes[today] || "No mission protocol for today."}</p>
+            <div className="flex items-center gap-2 mb-4 text-[10px] font-black text-magenta uppercase tracking-widest"><Edit3 size={14}/> Schedule_Directives</div>
+            <p className="text-xs text-white/50 font-mono italic leading-relaxed bg-black/20 p-4 border border-white/5">{scheduleNotes[today] || "No directives found for current timestamp."}</p>
          </div>
          <div className="glass p-5 border-l-2 border-terminal">
-            <div className="flex items-center gap-2 mb-3 text-[10px] font-black text-terminal uppercase"><Utensils size={14}/> Intake_Script</div>
-            <textarea value={mealNotes} onChange={(e)=>updateMealNotes(e.target.value)} className="w-full h-24 bg-transparent text-xs text-white/60 outline-none resize-none font-mono" placeholder="Daily nutritional script..."/>
+            <div className="flex items-center gap-2 mb-4 text-[10px] font-black text-terminal uppercase tracking-widest"><Utensils size={14}/> Intake_Script</div>
+            <textarea value={mealNotes} onChange={(e)=>updateMealNotes(e.target.value)} className="w-full h-24 bg-transparent text-xs text-white/60 outline-none resize-none font-mono" placeholder="Input daily caloric directives..."/>
          </div>
       </div>
     </div>
@@ -90,21 +106,21 @@ export default function GhostLog() {
 
   return (
     <div className="min-h-screen bg-[#050505] pb-32">
-      <div className={`sticky top-0 z-[100] p-6 border-b border-white/5 transition-all duration-700 backdrop-blur-xl ${timerState === 'SET' ? 'bg-cobalt/40' : timerState === 'REST' ? 'bg-magenta/40' : 'bg-black/90'}`}>
+      <div className={`sticky top-0 z-[100] p-6 border-b border-white/5 transition-all duration-700 backdrop-blur-3xl ${timerState === 'SET' ? 'bg-cobalt/40' : timerState === 'REST' ? 'bg-magenta/40' : 'bg-black/95'}`}>
         <div className="flex justify-between items-center mb-6">
-           <div className="text-[10px] font-black uppercase text-white/40 tracking-widest">{timerState}_PROTOCOL</div>
-           <button onClick={endSession} className="px-4 py-1.5 bg-red-500 text-black text-[10px] font-black uppercase italic shadow-[0_0_15px_rgba(239,68,68,0.4)] active:scale-95 transition-all"><Power size={12}/> End Session</button>
+           <div className="text-[10px] font-black uppercase text-white/40 tracking-[0.3em] font-mono italic">{timerState}_LOCKED</div>
+           <button onClick={endSession} className="px-5 py-2 bg-red-500 text-black text-[10px] font-black uppercase active:scale-90 transition-all">Abort_Link</button>
         </div>
         <div className="flex flex-col items-center">
           <div className="text-8xl font-black italic tracking-tighter text-glow-cobalt text-white">{Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}</div>
-          <button onClick={() => setIsPaused(!isPaused)} className="mt-4 px-12 py-3 bg-white/10 text-[10px] font-black uppercase border border-white/10">{isPaused ? 'Resume' : 'Pause'}</button>
+          <button onClick={() => setIsPaused(!isPaused)} className="mt-4 px-12 py-3 bg-white/10 text-[10px] font-black uppercase tracking-[0.2em] border border-white/10">{isPaused ? 'Resume' : 'Pause'}</button>
         </div>
       </div>
-      <div className="p-4 space-y-8 mt-6">
+      <div className="p-4 space-y-8 mt-8">
         {session.cards.map((card) => (
           <div key={card.id} className="space-y-4">
             <div className="flex justify-between items-end border-l-2 border-cobalt pl-4">
-              <div><h3 className="text-lg font-black italic uppercase text-white/90">{card.exercise.name}</h3><p className="text-[9px] text-white/30 uppercase tracking-[0.2em] font-mono">{card.exercise.equipment}</p></div>
+              <div><h3 className="text-lg font-black italic uppercase text-white/90">{card.exercise.name}</h3><p className="text-[9px] text-white/20 uppercase tracking-[0.2em] font-mono">{card.exercise.equipment}</p></div>
               <button onClick={() => removeExercise(card.id)} className="text-white/10 p-2"><X size={16}/></button>
             </div>
             <div className="space-y-2">
@@ -115,13 +131,13 @@ export default function GhostLog() {
                     <div className="flex gap-4">
                        <span className={`text-[10px] font-mono ${isActive ? 'text-cobalt' : 'text-white/20'}`}>0{idx+1}</span>
                        <div className="flex gap-4">
-                          <input type="number" value={set.weight} onChange={(e) => updateSet(card.id, set.id, 'weight', parseFloat(e.target.value))} className="w-14 bg-transparent text-xl font-black text-white outline-none" />
-                          <input type="number" value={set.reps} onChange={(e) => updateSet(card.id, set.id, 'reps', parseInt(e.target.value))} className="w-12 bg-transparent text-xl font-black text-white outline-none" />
+                          <input type="number" value={set.weight} onChange={(e) => updateSet(card.id, set.id, 'weight', parseFloat(e.target.value))} className="w-16 bg-transparent text-2xl font-black text-white outline-none" />
+                          <input type="number" value={set.reps} onChange={(e) => updateSet(card.id, set.id, 'reps', parseInt(e.target.value))} className="w-14 bg-transparent text-2xl font-black text-white outline-none" />
                        </div>
                     </div>
                     {!set.completed ? (
-                      <button onClick={() => isActive && timerState === 'SET' ? setTimeLeft(0) : setTracking(card.id, idx)} className={`px-6 py-2.5 text-[10px] font-black uppercase tracking-widest ${isActive && timerState === 'SET' ? 'bg-terminal text-black' : 'bg-cobalt text-white'}`}>{isActive && timerState === 'SET' ? 'Lifting' : 'Start'}</button>
-                    ) : <Check size={24} className="text-terminal" />}
+                      <button onClick={() => isActive && timerState === 'SET' ? setTimeLeft(0) : setTracking(card.id, idx)} className={`px-6 py-2.5 text-[10px] font-black uppercase tracking-widest ${isActive && timerState === 'SET' ? 'bg-terminal text-black' : 'bg-cobalt text-white'}`}>{isActive && timerState === 'SET' ? 'Log' : 'Start'}</button>
+                    ) : <Check size={28} className="text-terminal" />}
                   </div>
                 );
               })}
