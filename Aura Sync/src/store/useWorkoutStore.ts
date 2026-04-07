@@ -5,6 +5,28 @@ import { createEmptyHeatmap, addHeatFromExercise, applyDecay } from '../engine/h
 import { calculateReadiness, simulateHRV, simulateSleep } from '../engine/readiness';
 import { isPR } from '../engine/overload';
 
+// 🔊 STANDALONE NAMED EXPORT FOR BUILD STABILITY
+export const triggerAlert = (type: 'success' | 'warning') => {
+  try {
+    if ('vibrate' in navigator) {
+      navigator.vibrate(type === 'success' ? [100, 50, 100] : [300]);
+    }
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(type === 'success' ? 880 : 440, ctx.currentTime);
+    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.5);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.5);
+  } catch (e) {
+    console.warn("Audio Context blocked by browser policy");
+  }
+};
+
 interface WorkoutState {
   userName: string;
   userAge: number;
@@ -52,8 +74,8 @@ interface WorkoutState {
   connectWatch: () => Promise<void>;
   addTerminalEvent: (message: string, type?: TerminalEvent['type']) => void;
   decayHeatmap: () => void;
-  hardReset: () => void;
   refreshReadiness: () => void;
+  hardReset: () => void; 
 }
 
 export const useWorkoutStore = create<WorkoutState>()(
@@ -106,6 +128,7 @@ export const useWorkoutStore = create<WorkoutState>()(
           ghostVolume: ghostVolume + (sessionVol * (0.95 + Math.random() * 0.1)),
           activeCardId: null, activeSetIndex: 0
         });
+        triggerAlert('success');
       },
       addExercise: (ex) => {
         const s = get().session;
