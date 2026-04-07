@@ -5,12 +5,10 @@ import { createEmptyHeatmap, addHeatFromExercise, applyDecay } from '../engine/h
 import { calculateReadiness, simulateHRV, simulateSleep } from '../engine/readiness';
 import { isPR } from '../engine/overload';
 
-// 🔊 STANDALONE NAMED EXPORT FOR BUILD STABILITY
+// 🔊 EXPORTED TRIGGER
 export const triggerAlert = (type: 'success' | 'warning') => {
   try {
-    if ('vibrate' in navigator) {
-      navigator.vibrate(type === 'success' ? [100, 50, 100] : [300]);
-    }
+    if ('vibrate' in navigator) navigator.vibrate(type === 'success' ? [100, 50, 100] : [300]);
     const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
@@ -18,13 +16,9 @@ export const triggerAlert = (type: 'success' | 'warning') => {
     osc.frequency.setValueAtTime(type === 'success' ? 880 : 440, ctx.currentTime);
     gain.gain.setValueAtTime(0.1, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.5);
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + 0.5);
-  } catch (e) {
-    console.warn("Audio Context blocked by browser policy");
-  }
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(); osc.stop(ctx.currentTime + 0.5);
+  } catch (e) {}
 };
 
 interface WorkoutState {
@@ -41,41 +35,38 @@ interface WorkoutState {
   activeSetIndex: number;
   history: SessionHistory[];
   muscleHeat: MuscleHeat[];
+  muscleVolume: Record<string, number>; // NEW: Cumulative volume per muscle
   nutrition: NutritionEntry[];
   readiness: ReadinessScore;
   terminal: TerminalEvent[];
   evolutionXP: number;
-  totalWorkouts: number;
   watchConnected: boolean;
-  mealNotes: string;
-  protocolNotes: string;
   schedule: Record<string, 'gym' | 'home' | 'rest'>;
   scheduleNotes: Record<string, string>;
   ghostVolume: number;
 
   setUserName: (name: string) => void;
   setUserStats: (age: number, weight: number) => void;
-  setSessionLimit: (seconds: number) => void;
+  setSessionLimit: (s: number) => void;
   startSession: () => void;
   endSession: () => void;
-  addExercise: (exercise: Exercise) => void;
-  removeExercise: (cardId: string) => void;
-  addSet: (cardId: string) => void;
-  removeSet: (cardId: string, setId: string) => void;
-  updateSet: (cardId: string, setId: string, field: 'weight' | 'reps', value: number) => void;
-  completeSet: (cardId: string, setId: string) => void;
-  setTracking: (cardId: string | null, index: number) => void;
-  setDurations: (set: number, rest: number) => void;
-  startRest: (seconds: number) => void;
+  addExercise: (ex: Exercise) => void;
+  removeExercise: (id: string) => void;
+  addSet: (id: string) => void;
+  removeSet: (cid: string, sid: string) => void;
+  updateSet: (cid: string, sid: string, f: 'weight'|'reps', v: number) => void;
+  completeSet: (cid: string, sid: string) => void;
+  setTracking: (id: string | null, i: number) => void;
+  setDurations: (s: number, r: number) => void;
+  startRest: (s: number) => void;
   stopRest: () => void;
-  addNutrition: (entry: Omit<NutritionEntry, 'id' | 'timestamp'>) => void;
-  updateSchedule: (date: string, type: 'gym' | 'home' | 'rest') => void;
-  updateDateNote: (date: string, note: string) => void;
+  addNutrition: (n: any) => void;
+  updateSchedule: (d: string, t: any) => void;
+  updateDateNote: (d: string, n: string) => void;
   connectWatch: () => Promise<void>;
-  addTerminalEvent: (message: string, type?: TerminalEvent['type']) => void;
   decayHeatmap: () => void;
   refreshReadiness: () => void;
-  hardReset: () => void; 
+  hardReset: () => void;
 }
 
 export const useWorkoutStore = create<WorkoutState>()(
@@ -94,22 +85,21 @@ export const useWorkoutStore = create<WorkoutState>()(
       activeSetIndex: 0,
       history: [],
       muscleHeat: createEmptyHeatmap(),
+      muscleVolume: {}, 
       nutrition: [],
       readiness: calculateReadiness(simulateHRV(), simulateSleep(), 0),
       terminal: [],
       evolutionXP: 0,
-      totalWorkouts: 0,
       watchConnected: false,
-      mealNotes: "",
-      protocolNotes: "",
       schedule: {},
       scheduleNotes: {},
       ghostVolume: 0,
 
-      setUserName: (name) => set({ userName: name }),
-      setUserStats: (age, weight) => set({ userAge: age, userWeight: weight }),
-      setSessionLimit: (s) => set({ sessionLimit: s }),
+      setUserName: (userName) => set({ userName }),
+      setUserStats: (userAge, userWeight) => set({ userAge, userWeight }),
+      setSessionLimit: (sessionLimit) => set({ sessionLimit }),
       startSession: () => set({ session: { id: `ws-${Date.now()}`, startedAt: Date.now(), cards: [] } }),
+      
       endSession: () => {
         const { session, history, evolutionXP, ghostVolume } = get();
         if (!session) return;
@@ -121,61 +111,63 @@ export const useWorkoutStore = create<WorkoutState>()(
         })).filter(e => e.sets.length > 0);
         const sessionVol = newEntries.reduce((s, e) => s + e.totalVolume, 0);
         set({
-          session: null,
-          history: [...history, ...newEntries],
-          totalWorkouts: (get().totalWorkouts || 0) + 1,
+          session: null, history: [...history, ...newEntries],
           evolutionXP: evolutionXP + Math.round(sessionVol / 100),
           ghostVolume: ghostVolume + (sessionVol * (0.95 + Math.random() * 0.1)),
           activeCardId: null, activeSetIndex: 0
         });
         triggerAlert('success');
       },
+
       addExercise: (ex) => {
         const s = get().session;
         if (!s) return;
-        const defaultSets = [1, 2, 3].map(i => ({ id: `s-${Date.now()}-${i}`, weight: ex.defaultWeight, reps: ex.defaultReps, completed: false }));
-        set({ session: { ...s, cards: [...s.cards, { id: `c-${Date.now()}`, exercise: ex, sets: defaultSets }] } });
+        const sets = [1,2,3].map(i => ({ id: `s-${Date.now()}-${i}`, weight: ex.defaultWeight, reps: ex.defaultReps, completed: false }));
+        set({ session: { ...s, cards: [...s.cards, { id: `c-${Date.now()}`, exercise: ex, sets }] } });
       },
+
       removeExercise: (id) => set({ session: { ...get().session!, cards: get().session!.cards.filter(c => c.id !== id) } }),
-      addSet: (cardId) => {
-        const s = get().session;
-        if (!s) return;
-        set({
-          session: {
-            ...s,
-            cards: s.cards.map(c => {
-              if (c.id !== cardId) return c;
-              const lastSet = c.sets[c.sets.length - 1];
-              return { ...c, sets: [...c.sets, { id: `s-${Date.now()}`, weight: lastSet?.weight || 0, reps: lastSet?.reps || 0, completed: false }] };
-            })
-          }
-        });
-      },
-      removeSet: (cardId, setId) => set({ session: { ...get().session!, cards: get().session!.cards.map(c => c.id !== cardId ? c : { ...c, sets: c.sets.filter(st => st.id !== setId) }) } }),
-      updateSet: (cardId, setId, field, val) => set({ session: { ...get().session!, cards: get().session!.cards.map(c => c.id !== cardId ? c : { ...c, sets: c.sets.map(st => st.id === setId ? { ...st, [field]: val } : st) }) } }),
-      completeSet: (cardId, setId) => {
-        const { session, history, muscleHeat, evolutionXP } = get();
+      addSet: (cid) => set({ session: { ...get().session!, cards: get().session!.cards.map(c => c.id !== cid ? c : { ...c, sets: [...c.sets, { id: `s-${Date.now()}`, weight: c.sets[c.sets.length-1]?.weight || 0, reps: c.sets[c.sets.length-1]?.reps || 0, completed: false }] }) } }),
+      removeSet: (cid, sid) => set({ session: { ...get().session!, cards: get().session!.cards.map(c => c.id !== cid ? c : { ...c, sets: c.sets.filter(st => st.id !== sid) }) } }),
+      updateSet: (cid, sid, f, v) => set({ session: { ...get().session!, cards: get().session!.cards.map(c => c.id !== cid ? c : { ...c, sets: c.sets.map(st => st.id === sid ? { ...st, [f]: v } : st) }) } }),
+
+      completeSet: (cid, sid) => {
+        const { session, muscleVolume, muscleHeat, evolutionXP } = get();
         if (!session) return;
-        const card = session.cards.find(c => c.id === cardId);
-        const setData = card?.sets.find(s => s.id === setId);
+        const card = session.cards.find(c => c.id === cid);
+        const setData = card?.sets.find(s => s.id === sid);
         if (!card || !setData) return;
+        
+        const setVol = setData.weight * setData.reps;
+        const newMuscleVol = { ...muscleVolume };
+        card.exercise.primaryMuscles.forEach(m => {
+          newMuscleVol[m] = (newMuscleVol[m] || 0) + setVol;
+        });
+
         set({
-          session: { ...session, cards: session.cards.map(c => c.id !== cardId ? c : { ...c, sets: c.sets.map(s => s.id === setId ? { ...s, completed: true, timestamp: Date.now(), isPR: isPR(card.exercise.id, setData.weight, setData.reps, history) } : s) }) },
+          session: { ...session, cards: session.cards.map(c => c.id !== cid ? c : { ...c, sets: c.sets.map(s => s.id === sid ? { ...s, completed: true, timestamp: Date.now() } : s) }) },
           muscleHeat: addHeatFromExercise(muscleHeat, card.exercise, 1),
+          muscleVolume: newMuscleVol,
           evolutionXP: evolutionXP + 10
         });
       },
-      setTracking: (cardId, index) => set({ activeCardId: cardId, activeSetIndex: index }),
-      setDurations: (s, r) => set({ setDuration: s, restDuration: r }),
+
+      setTracking: (activeCardId, activeSetIndex) => set({ activeCardId, activeSetIndex }),
+      setDurations: (setDuration, restDuration) => set({ setDuration, restDuration }),
       startRest: (s) => set({ isResting: true, restSeconds: s }),
       stopRest: () => set({ isResting: false }),
       addNutrition: (n) => set({ nutrition: [...get().nutrition, { ...n, id: `n-${Date.now()}`, timestamp: Date.now() }], evolutionXP: get().evolutionXP + 5 }),
       updateSchedule: (date, type) => set({ schedule: { ...get().schedule, [date]: type } }),
       updateDateNote: (date, note) => set({ scheduleNotes: { ...get().scheduleNotes, [date]: note } }),
-      connectWatch: async () => { set({ watchConnected: true }); },
-      addTerminalEvent: (m, t) => set({ terminal: [...get().terminal, { id: `${Date.now()}`, timestamp: Date.now(), message: m, type: t || 'info' }] }),
+      connectWatch: async () => {
+        try {
+          const device = await (navigator as any).bluetooth.requestDevice({ filters: [{ services: ['heart_rate'] }] });
+          await device.gatt.connect();
+          set({ watchConnected: true });
+        } catch (e) {}
+      },
       decayHeatmap: () => set({ muscleHeat: applyDecay(get().muscleHeat) }),
-      refreshReadiness: () => set({ readiness: calculateReadiness(simulateHRV(), simulateSleep(), get().history.reduce((s, h) => s + h.totalVolume, 0)) }),
+      refreshReadiness: () => set({ readiness: calculateReadiness(simulateHRV(), simulateSleep(), 0) }),
       hardReset: () => { localStorage.clear(); window.location.reload(); }
     }),
     { name: 'aura-sync-storage', storage: createJSONStorage(() => localStorage) }
