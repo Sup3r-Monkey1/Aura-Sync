@@ -28,7 +28,7 @@ interface WorkoutState {
   mealNotes: string;
   protocolNotes: string;
   schedule: Record<string, 'gym' | 'home' | 'rest'>;
-  scheduleNotes: Record<string, string>; // NEW: Date-specific notes
+  scheduleNotes: Record<string, string>;
   ghostVolume: number;
 
   setUserName: (name: string) => void;
@@ -52,7 +52,8 @@ interface WorkoutState {
   connectWatch: () => Promise<void>;
   addTerminalEvent: (message: string, type?: TerminalEvent['type']) => void;
   decayHeatmap: () => void;
-  hardReset: () => void; 
+  hardReset: () => void;
+  refreshReadiness: () => void;
 }
 
 export const useWorkoutStore = create<WorkoutState>()(
@@ -84,11 +85,11 @@ export const useWorkoutStore = create<WorkoutState>()(
       ghostVolume: 0,
 
       setUserName: (name) => set({ userName: name }),
-      setUserStats: (userAge, userWeight) => set({ userAge, userWeight }),
+      setUserStats: (age, weight) => set({ userAge: age, userWeight: weight }),
       setSessionLimit: (s) => set({ sessionLimit: s }),
       startSession: () => set({ session: { id: `ws-${Date.now()}`, startedAt: Date.now(), cards: [] } }),
       endSession: () => {
-        const { session, history, evolutionXP, totalWorkouts, ghostVolume } = get();
+        const { session, history, evolutionXP, ghostVolume } = get();
         if (!session) return;
         const newEntries = session.cards.map(c => ({
           exerciseId: c.exercise.id,
@@ -100,7 +101,6 @@ export const useWorkoutStore = create<WorkoutState>()(
         set({
           session: null,
           history: [...history, ...newEntries],
-          totalWorkouts: totalWorkouts + 1,
           evolutionXP: evolutionXP + Math.round(sessionVol / 100),
           ghostVolume: ghostVolume + (sessionVol * (0.95 + Math.random() * 0.1)),
           activeCardId: null, activeSetIndex: 0
@@ -116,9 +116,21 @@ export const useWorkoutStore = create<WorkoutState>()(
       addSet: (cardId) => {
         const s = get().session;
         if (!s) return;
-        set({ session: { ...s, cards: s.cards.map(c => c.id !== cardId ? c : { ...c, sets: [...c.sets, { id: `s-${Date.now()}`, weight: c.sets[c.sets.length-1]?.weight || 0, reps: c.sets[c.sets.length-1]?.reps || 0, completed: false }] }) } });
+        set({
+          session: {
+            ...s,
+            cards: s.cards.map(c => {
+              if (c.id !== cardId) return c;
+              const lastSet = c.sets[c.sets.length - 1];
+              return {
+                ...c,
+                sets: [...c.sets, { id: `s-${Date.now()}`, weight: lastSet?.weight || 0, reps: lastSet?.reps || 0, completed: false }]
+              };
+            })
+          }
+        });
       },
-      removeSet: (cardId, setId) => set({ session: { ...get().session!, cards: s.cards.map(c => c.id !== cardId ? c : { ...c, sets: c.sets.filter(st => st.id !== setId) }) } }),
+      removeSet: (cardId, setId) => set({ session: { ...get().session!, cards: get().session!.cards.map(c => c.id !== cardId ? c : { ...c, sets: c.sets.filter(st => st.id !== setId) }) } }),
       updateSet: (cardId, setId, field, val) => set({ session: { ...get().session!, cards: get().session!.cards.map(c => c.id !== cardId ? c : { ...c, sets: c.sets.map(st => st.id === setId ? { ...st, [field]: val } : st) }) } }),
       completeSet: (cardId, setId) => {
         const { session, history, muscleHeat, evolutionXP } = get();
@@ -142,6 +154,7 @@ export const useWorkoutStore = create<WorkoutState>()(
       connectWatch: async () => { set({ watchConnected: true }); },
       addTerminalEvent: (m, t) => set({ terminal: [...get().terminal, { id: `${Date.now()}`, timestamp: Date.now(), message: m, type: t || 'info' }] }),
       decayHeatmap: () => set({ muscleHeat: applyDecay(get().muscleHeat) }),
+      refreshReadiness: () => set({ readiness: calculateReadiness(simulateHRV(), simulateSleep(), get().history.reduce((s, h) => s + h.totalVolume, 0)) }),
       hardReset: () => { localStorage.clear(); window.location.reload(); }
     }),
     { name: 'aura-sync-storage', storage: createJSONStorage(() => localStorage) }
