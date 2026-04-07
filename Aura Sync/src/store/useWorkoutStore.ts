@@ -29,6 +29,8 @@ interface WorkoutState {
   session: WorkoutSession | null;
   isResting: boolean;
   restSeconds: number;
+  setDuration: number;   // Adjustable lifting window
+  restDuration: number;  // Adjustable rest window
   history: SessionHistory[];
   muscleHeat: MuscleHeat[];
   nutrition: NutritionEntry[];
@@ -37,7 +39,7 @@ interface WorkoutState {
   evolutionXP: number;
   totalWorkouts: number;
   watchConnected: boolean;
-  mealNotes: string; // New Notepad state
+  mealNotes: string;
 
   startSession: () => void;
   endSession: () => void;
@@ -47,6 +49,7 @@ interface WorkoutState {
   removeSet: (cardId: string, setId: string) => void;
   updateSet: (cardId: string, setId: string, field: 'weight' | 'reps', value: number) => void;
   completeSet: (cardId: string, setId: string) => void;
+  setDurations: (set: number, rest: number) => void;
   startRest: (seconds: number) => void;
   stopRest: () => void;
   addNutrition: (entry: Omit<NutritionEntry, 'id' | 'timestamp'>) => void;
@@ -64,6 +67,8 @@ export const useWorkoutStore = create<WorkoutState>()(
       session: null,
       isResting: false,
       restSeconds: 90,
+      setDuration: 60,  // Default 1m
+      restDuration: 90, // Default 1.5m
       history: [],
       muscleHeat: createEmptyHeatmap(),
       nutrition: [],
@@ -180,6 +185,7 @@ export const useWorkoutStore = create<WorkoutState>()(
         });
       },
 
+      setDurations: (setVal, restVal) => set({ setDuration: setVal, restDuration: restVal }),
       startRest: (seconds) => set({ isResting: true, restSeconds: seconds }),
       stopRest: () => set({ isResting: false }),
 
