@@ -1,17 +1,24 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Activity, Flame, Zap, Timer, Edit2, ShieldCheck, Watch } from 'lucide-react';
+import { Activity, Flame, Zap, Timer, Edit2, ShieldCheck, Watch, User, ChefHat } from 'lucide-react';
 import { useWorkoutStore } from '../store/useWorkoutStore';
 import BlackBoxTerminal from './BlackBoxTerminal';
 
 export default function AuraDashboard() {
-  const { history, watchConnected, connectWatch, evolutionXP, nutrition, userName, userAge, userWeight, setUserStats } = useWorkoutStore();
+  const { history, watchConnected, connectWatch, evolutionXP, nutrition, userName, userAge, userWeight, setUserStats, setUserName } = useWorkoutStore();
   const [isEditingProfile, setIsEditingProfile] = useState(false);
 
   const today = new Date().setHours(0, 0, 0, 0);
   const totalCals = nutrition.filter(n => n.timestamp >= today).reduce((s, n) => s + n.calories, 0);
   const totalProtein = nutrition.filter(n => n.timestamp >= today).reduce((s, n) => s + n.protein, 0);
-  const weeklyVol = history.filter(h => h.date > (Date.now() - 604800000)).reduce((s, h) => s + h.totalVolume, 0);
+
+  // 🥩 BIO-STRATEGY ENGINE
+  const getStrategy = () => {
+    if (userWeight > 210) return { label: "AGGRESSIVE CUT", cal: 2100, protein: 220, note: "Target fat oxidation while preserving nitrogen balance." };
+    if (userWeight < 165) return { label: "HYPERTROPHY BULK", cal: 3200, protein: 180, note: "Caloric surplus required for myofibrillar expansion." };
+    return { label: "LEAN RECOMP", cal: 2600, protein: 200, note: "Maintenance load with high intensity set-chains." };
+  };
+  const strategy = getStrategy();
 
   return (
     <div className="min-h-screen bg-[#050505] pb-24 p-4 pt-12 overflow-x-hidden">
@@ -24,16 +31,19 @@ export default function AuraDashboard() {
           <p className="text-[9px] text-white/30 uppercase tracking-[0.2em] font-mono">BIO_LINK: {userAge}Y // {userWeight}LBS</p>
         </div>
         <div className="text-right">
-          <div className="text-[9px] text-white/20 uppercase font-mono tracking-widest">RANK_XP</div>
+          <div className="text-[9px] text-white/20 uppercase font-mono">RANK_XP</div>
           <div className="text-2xl font-black text-cobalt italic">{evolutionXP}</div>
         </div>
       </div>
 
-      <div className="px-4 mb-4 grid grid-cols-4 gap-2">
-        <HudStat icon={Activity} label="Logs" value={history.length} color="#3b82f6" />
-        <HudStat icon={Flame} label="Weekly" value={`${(weeklyVol/1000).toFixed(1)}k`} color="#f97316" />
-        <HudStat icon={Zap} label="Cals" value={totalCals} color="#00ff88" />
-        <HudStat icon={Zap} label="Protein" value={`${totalProtein}g`} color="#e535ab" />
+      {/* 🍲 BIO-STRATEGY CARD */}
+      <div className="glass p-5 border-l-2 border-magenta mb-6">
+        <div className="flex items-center gap-2 mb-4 text-[10px] font-black text-magenta uppercase tracking-widest"><ChefHat size={14}/> Nutritional_Strategy</div>
+        <div className="flex justify-between items-end mb-4">
+           <div className="text-xl font-black text-white italic tracking-tighter">{strategy.label}</div>
+           <div className="text-xs font-black text-magenta">{strategy.cal} KCAL</div>
+        </div>
+        <p className="text-[10px] text-white/40 font-mono leading-relaxed">{strategy.note}</p>
       </div>
 
       <div className="px-4 mb-10 mt-10"><BlackBoxTerminal /></div>
