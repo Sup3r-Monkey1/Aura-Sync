@@ -11,6 +11,7 @@ import { calculateReadiness, simulateHRV, simulateSleep } from '../engine/readin
 import { isPR } from '../engine/overload';
 
 interface WorkoutState {
+  userName: string;
   session: WorkoutSession | null;
   isResting: boolean;
   restSeconds: number;
@@ -27,10 +28,11 @@ interface WorkoutState {
   totalWorkouts: number;
   watchConnected: boolean;
   mealNotes: string;
-  protocolNotes: string; // New: Workout specific notes
+  protocolNotes: string;
   schedule: Record<string, 'gym' | 'home' | 'rest'>; 
   ghostVolume: number;
 
+  setUserName: (name: string) => void;
   startSession: () => void;
   endSession: () => void;
   addExercise: (exercise: Exercise) => void;
@@ -57,6 +59,7 @@ interface WorkoutState {
 export const useWorkoutStore = create<WorkoutState>()(
   persist(
     (set, get) => ({
+      userName: "Subject_01",
       session: null,
       isResting: false,
       restSeconds: 90,
@@ -77,6 +80,8 @@ export const useWorkoutStore = create<WorkoutState>()(
       schedule: {},
       ghostVolume: 0,
 
+      setUserName: (name) => set({ userName: name }),
+
       startSession: () => set({ session: { id: `ws-${Date.now()}`, startedAt: Date.now(), cards: [] } }),
 
       endSession: () => {
@@ -88,15 +93,12 @@ export const useWorkoutStore = create<WorkoutState>()(
           sets: c.sets.filter(s => s.completed).map(s => ({ weight: s.weight, reps: s.reps })),
           totalVolume: c.sets.filter(s => s.completed).reduce((sum, s) => sum + s.weight * s.reps, 0)
         })).filter(e => e.sets.length > 0);
-        
         const sessionVol = newEntries.reduce((s, e) => s + e.totalVolume, 0);
-        
         set({
           session: null,
           history: [...history, ...newEntries],
           totalWorkouts: totalWorkouts + 1,
           evolutionXP: evolutionXP + Math.round(sessionVol / 100),
-          // Ghost keeps pace with real work (matched volume with slight variance)
           ghostVolume: ghostVolume + (sessionVol * (0.95 + Math.random() * 0.1)),
           activeCardId: null,
           activeSetIndex: 0
@@ -141,14 +143,19 @@ export const useWorkoutStore = create<WorkoutState>()(
       addNutrition: (n) => set({ nutrition: [...get().nutrition, { ...n, id: `n-${Date.now()}`, timestamp: Date.now() }], evolutionXP: get().evolutionXP + (n.protein >= 25 ? 25 : 5) }),
       updateMealNotes: (m) => set({ mealNotes: m }),
       updateProtocolNotes: (p) => set({ protocolNotes: p }),
-      updateSchedule: (date, type) => {
-        const { schedule, ghostVolume } = get();
-        // If changing a 'gym' day to 'rest' or missing a day, Ghost would jump. 
-        // Logic: Ghost gets 3000 lbs if user marks a day 'rest' that was previously 'gym'
-        set({ schedule: { ...schedule, [date]: type } });
-      },
+      updateSchedule: (date, type) => set({ schedule: { ...get().schedule, [date]: type } }),
       refreshReadiness: () => set({ readiness: calculateReadiness(simulateHRV(), simulateSleep(), get().history.reduce((s, h) => s + h.totalVolume, 0)) }),
-      connectWatch: async () => { set({ watchConnected: true }); },
+      
+      connectWatch: async () => {
+        try {
+          const device = await (navigator as any).bluetooth.requestDevice({ filters: [{ services: ['heart_rate'] }] });
+          await device.gatt.connect();
+          set({ watchConnected: true });
+        } catch (e) {
+          console.error("Bluetooth pairing cancelled");
+        }
+      },
+
       addTerminalEvent: (m, t) => set({ terminal: [...get().terminal, { id: `${Date.now()}`, timestamp: Date.now(), message: m, type: t || 'info' }] }),
       decayHeatmap: () => set({ muscleHeat: applyDecay(get().muscleHeat) }),
       hardReset: () => { localStorage.clear(); window.location.reload(); }
