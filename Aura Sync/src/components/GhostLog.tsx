@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Play, Square, Pause, X, Check, Clock, Trash2 } from 'lucide-react';
-import { useWorkoutStore } from '../store/useWorkoutStore';
+import { useWorkoutStore, triggerAlert } from '../store/useWorkoutStore';
 import { workoutRegistry } from '../data/workoutRegistry';
 import { hapticSetComplete, hapticTap, hapticRestDone } from '../services/haptics';
 
@@ -23,13 +23,16 @@ export default function GhostLog() {
         const currentSet = currentCard?.sets[activeSetIndex];
         if (currentCard && currentSet) { completeSet(activeCardId!, currentSet.id); hapticSetComplete(); }
         setTimerState('REST'); setTimeLeft(restDuration);
+        triggerAlert('success'); // 🔊 AUDIO ALERT
       } else if (timerState === 'REST') {
         const currentCard = session?.cards.find(c => c.id === activeCardId);
         const nextIndex = activeSetIndex + 1;
         if (currentCard && nextIndex < currentCard.sets.length) {
           setTracking(activeCardId!, nextIndex); setTimerState('SET'); setTimeLeft(setDuration); hapticRestDone();
+          triggerAlert('warning'); // 🔊 AUDIO ALERT
         } else {
           setTimerState('IDLE'); setIsPaused(true); setTracking(null, 0); hapticRestDone();
+          triggerAlert('success');
         }
       }
     }
@@ -40,20 +43,19 @@ export default function GhostLog() {
     setTracking(cardId, index); setTimerState('SET'); setTimeLeft(setDuration); setIsPaused(false); hapticTap();
   };
 
-  if (!session) return <div className="h-screen flex items-center justify-center bg-[#050505] text-white/10 font-black tracking-[0.5em] italic">AWAITING_LINK</div>;
+  if (!session) return <div className="h-screen flex items-center justify-center bg-[#050505] text-white/10 font-black italic uppercase tracking-[0.5em]">Awaiting_link</div>;
 
   return (
     <div className="min-h-screen bg-[#050505] pb-32">
-      {/* HUD TIMER */}
       <div className={`sticky top-0 z-50 p-6 border-b border-white/5 transition-colors duration-700 ${
         timerState === 'SET' ? 'bg-cobalt/20' : timerState === 'REST' ? 'bg-magenta/20' : 'bg-black'
       }`}>
-        <div className="flex justify-between items-center mb-6 px-2">
-          <button onClick={() => setShowTimerAdjust(true)} className="flex items-center gap-2 text-[10px] font-black uppercase text-white/40"><Clock size={14} className="text-cobalt" /> Intervals</button>
+        <div className="flex justify-between items-center mb-6">
+          <button onClick={() => setShowTimerAdjust(true)} className="flex items-center gap-2 text-[10px] font-black uppercase text-white/40"><Clock size={14} className="text-cobalt" /> Adjust</button>
           <button onClick={endSession} className="text-[10px] font-black text-hazard border border-hazard/30 px-3 py-1 uppercase">Terminate</button>
         </div>
         <div className="flex flex-col items-center">
-          <div className="text-[10px] font-black tracking-[0.4em] uppercase text-white/40 mb-2">{timerState === 'IDLE' ? 'Ready' : timerState}</div>
+          <div className="text-[10px] font-black tracking-[0.4em] uppercase text-white/40 mb-2">{timerState === 'IDLE' ? 'Link Ready' : timerState}</div>
           <div className="text-8xl font-black italic tracking-tighter text-glow-cobalt text-white">{Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}</div>
           <div className="mt-6 flex gap-4"><button onClick={() => setIsPaused(!isPaused)} className="px-8 py-2 glass text-[10px] font-black uppercase tracking-widest text-white/60">{isPaused ? 'Resume' : 'Pause'}</button></div>
         </div>
@@ -85,7 +87,7 @@ export default function GhostLog() {
                       {!set.completed ? (
                         <>
                           <button onClick={() => startChain(card.id, idx)} className="px-4 py-2 bg-cobalt text-black text-[10px] font-black uppercase tracking-widest">{isActive && timerState === 'SET' ? 'Lifting' : 'Start'}</button>
-                          <button onClick={() => removeSet(card.id, set.id)} className="p-2 text-white/10 hover:text-red-500 transition-colors"><Trash2 size={14}/></button>
+                          <button onClick={() => removeSet(card.id, set.id)} className="p-2 text-white/10"><Trash2 size={14}/></button>
                         </>
                       ) : <Check size={20} className="text-terminal" />}
                     </div>
@@ -93,7 +95,7 @@ export default function GhostLog() {
                 );
               })}
             </div>
-            <button onClick={() => addSet(card.id)} className="w-full py-2 border border-dashed border-white/5 text-[9px] text-white/20 uppercase tracking-[0.3em] font-bold">+ Append Set</button>
+            <button onClick={() => addSet(card.id)} className="w-full py-2 border border-dashed border-white/5 text-[9px] text-white/20 uppercase tracking-widest">+ Append Set</button>
           </div>
         ))}
       </div>
@@ -101,20 +103,9 @@ export default function GhostLog() {
       <button onClick={() => setShowAdd(true)} className="fixed bottom-24 right-6 h-14 w-14 bg-cobalt text-black flex items-center justify-center glow-cobalt z-40 shadow-2xl"><Plus /></button>
 
       <AnimatePresence>
-        {showTimerAdjust && (
-          <motion.div initial={{ opacity: 0, y: 100 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 100 }} className="fixed inset-0 z-[70] bg-black/98 p-8 flex flex-col justify-center">
-             <h2 className="text-2xl font-black italic uppercase text-white mb-10 text-center">Interval Adjust</h2>
-             <div className="space-y-12">
-               <ScrollSelector label="Lifting Window" value={setDuration} onChange={(v) => setDurations(v, restDuration)} />
-               <ScrollSelector label="Recovery Window" value={restDuration} onChange={(v) => setDurations(setDuration, v)} />
-             </div>
-             <button onClick={() => setShowTimerAdjust(false)} className="mt-16 w-full py-5 bg-white text-black font-black uppercase tracking-widest">Update Protocols</button>
-          </motion.div>
-        )}
-
         {showAdd && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] bg-black/98 p-6 overflow-y-auto">
-             <div className="flex justify-between items-center mb-10"><h2 className="text-2xl font-black italic uppercase text-white">Sync Protocols</h2><button onClick={() => setShowAdd(false)} className="p-3 bg-white/5 text-white"><X/></button></div>
+             <div className="flex justify-between items-center mb-10"><h2 className="text-2xl font-black italic uppercase text-white">Protocols</h2><button onClick={() => setShowAdd(false)} className="p-3 bg-white/5 text-white"><X/></button></div>
              <div className="grid gap-2">
                 {workoutRegistry.map(ex => (
                   <button key={ex.id} onClick={() => { addExercise(ex); setShowAdd(false); hapticTap(); }} className="glass p-5 text-left border-white/5 hover:border-cobalt/40 transition-colors">
@@ -126,20 +117,6 @@ export default function GhostLog() {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
-  );
-}
-
-function ScrollSelector({ label, value, onChange }: any) {
-  const mins = Math.floor(value / 60); const secs = value % 60;
-  return (
-    <div className="flex flex-col items-center">
-      <span className="text-[10px] font-black uppercase text-white/30 mb-4 tracking-[0.2em]">{label}</span>
-      <div className="flex items-center gap-6">
-        <div className="flex flex-col items-center"><button onClick={() => onChange(Math.max(0, value - 60))} className="p-3 text-white/20"><Plus size={16} className="rotate-45"/></button><div className="text-5xl font-black text-white font-mono">{mins}m</div><button onClick={() => onChange(value + 60)} className="p-3 text-white/20"><Plus size={16}/></button></div>
-        <div className="text-4xl font-black text-white/10">:</div>
-        <div className="flex flex-col items-center"><button onClick={() => onChange(Math.max(0, value - 5))} className="p-3 text-white/20"><Plus size={16} className="rotate-45"/></button><div className="text-5xl font-black text-white font-mono">{String(secs).padStart(2, '0')}s</div><button onClick={() => onChange(value + 5)} className="p-3 text-white/20"><Plus size={16}/></button></div>
-      </div>
     </div>
   );
 }
