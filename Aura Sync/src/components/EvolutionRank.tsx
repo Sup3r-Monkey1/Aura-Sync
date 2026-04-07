@@ -1,80 +1,133 @@
-import { motion } from 'framer-motion';
-import { Heart, Activity, ShieldCheck, Watch } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Plus, X, Check, Clock, Trash2, Power, RotateCcw, Cpu, Dumbbell as DbIcon, ShieldCheck, Edit3, Utensils } from 'lucide-react';
 import { useWorkoutStore } from '../store/useWorkoutStore';
+import { workoutRegistry } from '../data/workoutRegistry';
 
-const TIERS = [
-  { label: 'VOID', color: '#1A1A1B', minVol: -1 },
-  { label: 'PULSE', color: '#00D1FF', minVol: 5000 },
-  { label: 'NEBULA', color: '#BD00FF', minVol: 25000 },
-  { label: 'SOLAR', color: '#FFD600', minVol: 75000 },
-  { label: 'GOD', color: '#FFFFFF', minVol: 250000 },
-];
+export default function GhostLog() {
+  const { session, endSession, removeExercise, addSet, removeSet, updateSet, completeSet, setDuration, restDuration, activeCardId, activeSetIndex, setTracking, dailyProtocols, toggleDailyExercise, startSession, scheduleNotes, mealNotes, updateMealNotes } = useWorkoutStore();
+  
+  const [activeDay, setActiveDay] = useState('monday');
+  const [activeTab, setActiveTab] = useState<'machine' | 'free'>('machine');
+  const [timerState, setTimerState] = useState<'IDLE' | 'SET' | 'REST'>('IDLE');
+  const [timeLeft, setTimeLeft] = useState(0);
+  const [isPaused, setIsPaused] = useState(true);
 
-export default function EvolutionRank() {
-  const { history, muscleHeat, muscleVolume, watchConnected, connectWatch, session } = useWorkoutStore();
+  const today = new Date().toISOString().split('T')[0];
+  const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
-  const getMColor = (m: string) => {
-    const vol = muscleVolume[m] || 0;
-    return ([...TIERS].reverse().find(t => vol >= t.minVol) || TIERS[0]).color;
+  useEffect(() => {
+    let interval: any;
+    if (!isPaused && timeLeft > 0) {
+      interval = setInterval(() => setTimeLeft(p => p - 1), 1000);
+    } else if (timeLeft === 0 && !isPaused) {
+      if (timerState === 'SET') {
+        const card = session?.cards.find(c => c.id === activeCardId);
+        if (card) completeSet(activeCardId!, card.sets[activeSetIndex].id);
+        setTimerState('REST'); setTimeLeft(restDuration);
+      } else if (timerState === 'REST') {
+        const card = session?.cards.find(c => c.id === activeCardId);
+        if (card && activeSetIndex + 1 < card.sets.length) {
+          setTracking(activeCardId!, activeSetIndex + 1); setTimerState('SET'); setTimeLeft(setDuration);
+        } else {
+          setTimerState('IDLE'); setIsPaused(true); setTracking(null, 0);
+        }
+      }
+    }
+    return () => clearInterval(interval);
+  }, [timeLeft, isPaused, timerState]);
+
+  const handleLaunch = () => {
+    const ids = dailyProtocols[activeDay] || [];
+    const selected = workoutRegistry.filter(ex => ids.includes(ex.id));
+    startSession(selected);
   };
 
-  const getMGlow = (m: string) => {
-    if (!session) return "none";
-    const h = muscleHeat.find(x => x.group === m)?.heat || 0;
-    return h > 40 ? `drop-shadow(0 0 ${h/4}px ${getMColor(m)})` : "none";
-  };
-
-  return (
-    <div className="min-h-screen bg-[#050505] p-4 pt-12 pb-24 overflow-x-hidden">
-      <h2 className="text-sm font-black uppercase tracking-[0.4em] text-white/70 italic mb-8 px-2">Evolution_Anatomy</h2>
-
-      <div className="glass-strong p-10 mb-8 flex flex-col items-center relative overflow-hidden border-t border-white/10">
-        <div className="relative w-64 h-96">
-           <svg viewBox="0 0 200 400" className="w-full h-full drop-shadow-[0_0_2px_rgba(255,255,255,0.05)]">
-              {/* HEAD */}
-              <path d="M85 40 Q100 20 115 40 Q115 65 100 70 Q85 65 85 40 Z" fill={getMColor('core')} />
-              {/* CHEST */}
-              <path d="M60 80 Q100 70 140 80 L135 150 Q100 160 65 150 Z" fill={getMColor('chest')} style={{ filter: getMGlow('chest') }} />
-              {/* BACK */}
-              <path d="M60 85 L40 140 Q60 145 65 140 Z" fill={getMColor('back')} />
-              <path d="M140 85 L160 140 Q140 145 135 140 Z" fill={getMColor('back')} />
-              {/* ARMS */}
-              <path d="M45 85 Q30 85 30 180 L45 180 Z" fill={getMColor('biceps')} style={{ filter: getMGlow('biceps') }} />
-              <path d="M155 85 Q170 85 170 180 L155 180 Z" fill={getMColor('biceps')} style={{ filter: getMGlow('biceps') }} />
-              {/* CORE */}
-              <rect x="75" y="155" width="50" height="40" fill={getMColor('core')} rx="2" />
-              {/* LEGS */}
-              <path d="M65 160 Q55 240 60 360 L90 360 L95 160 Z" fill={getMColor('quads')} style={{ filter: getMGlow('quads') }} />
-              <path d="M135 160 Q145 240 140 360 L110 360 L105 160 Z" fill={getMColor('quads')} style={{ filter: getMGlow('quads') }} />
-           </svg>
+  if (!session) return (
+    <div className="min-h-screen bg-[#050505] p-6 pt-16 pb-24 overflow-y-auto no-scrollbar">
+      <h2 className="text-xl font-black italic text-white uppercase mb-8">System_Config</h2>
+      
+      {/* DAILY MATRIX */}
+      <div className="glass p-5 mb-6 border-l-2 border-cobalt">
+        <div className="flex gap-1 overflow-x-auto no-scrollbar mb-6">
+          {days.map(d => (
+            <button key={d} onClick={() => setActiveDay(d)} className={`px-4 py-2 text-[8px] font-black uppercase border transition-all ${activeDay === d ? 'bg-cobalt text-black border-cobalt shadow-[0_0_15px_#2563eb]' : 'bg-white/5 border-white/10 text-white/40'}`}>
+              {d.slice(0,3)}
+            </button>
+          ))}
         </div>
-
-        <div className="w-full mt-10 grid grid-cols-5 gap-2 border-t border-white/5 pt-6">
-           {TIERS.map(t => (
-             <div key={t.label} className="flex flex-col items-center">
-                <div className="h-1.5 w-full rounded-full" style={{ backgroundColor: t.color }} />
-                <span className="text-[7px] font-black text-white/30 mt-2 tracking-tighter">{t.label}</span>
-             </div>
-           ))}
+        <div className="flex gap-4 mb-4 border-b border-white/5 pb-2">
+          <button onClick={() => setActiveTab('machine')} className={`text-[10px] font-black uppercase flex items-center gap-2 ${activeTab === 'machine' ? 'text-cobalt' : 'text-white/20'}`}><Cpu size={12}/> Machines</button>
+          <button onClick={() => setActiveTab('free')} className={`text-[10px] font-black uppercase flex items-center gap-2 ${activeTab === 'free' ? 'text-white' : 'text-white/20'}`}><DbIcon size={12}/> Hardware</button>
         </div>
+        <div className="grid grid-cols-1 gap-2 max-h-64 overflow-y-auto no-scrollbar pr-2 mb-6">
+          {workoutRegistry.filter(ex => (activeTab === 'machine' ? ex.isMachine : !ex.isMachine)).map(ex => {
+            const isSelected = dailyProtocols[activeDay]?.includes(ex.id);
+            return (
+              <button key={ex.id} onClick={() => toggleDailyExercise(activeDay, ex.id)} className={`flex justify-between items-center p-3 border-r-2 ${isSelected ? 'bg-cobalt/10 border-cobalt' : 'bg-white/[0.01] border-white/5'}`}>
+                <span className={`text-[10px] font-bold uppercase ${isSelected ? 'text-white' : 'text-white/30'}`}>{ex.name}</span>
+                {isSelected && <ShieldCheck size={12} className="text-cobalt" />}
+              </button>
+            );
+          })}
+        </div>
+        <button onClick={handleLaunch} className="w-full py-5 bg-cobalt text-black font-black uppercase text-xs tracking-[0.4em] glow-cobalt">Initialize Bio-Sync</button>
       </div>
 
-      <div className="grid grid-cols-3 gap-3 mb-10">
-         <div className="glass p-5 text-center">
-            <Heart size={16} className={watchConnected ? "text-red-500 animate-pulse" : "text-white/5"} />
-            <div className="text-xl font-black mt-2 text-white">{watchConnected ? "64ms" : "--"}</div>
-            <div className="text-[8px] text-white/20 uppercase font-bold tracking-widest mt-1">HRV</div>
+      {/* SYNCED NOTEPADS */}
+      <div className="space-y-4">
+         <div className="glass p-5 border-l-2 border-magenta">
+            <div className="flex items-center gap-2 mb-3 text-[10px] font-black text-magenta uppercase"><Edit3 size={14}/> Schedule_Notes</div>
+            <p className="text-xs text-white/40 font-mono italic leading-relaxed">{scheduleNotes[today] || "No mission protocol for today."}</p>
          </div>
-         <div className="glass p-5 text-center border-b border-cobalt/40">
-            <Activity size={16} className="text-cobalt" />
-            <div className="text-xl font-black mt-2 text-white">{history.length}</div>
-            <div className="text-[8px] text-white/20 uppercase font-bold tracking-widest mt-1">Syncs</div>
+         <div className="glass p-5 border-l-2 border-terminal">
+            <div className="flex items-center gap-2 mb-3 text-[10px] font-black text-terminal uppercase"><Utensils size={14}/> Intake_Script</div>
+            <textarea value={mealNotes} onChange={(e)=>updateMealNotes(e.target.value)} className="w-full h-24 bg-transparent text-xs text-white/60 outline-none resize-none font-mono" placeholder="Daily nutritional script..."/>
          </div>
-         <div className="glass p-5 text-center">
-            <ShieldCheck size={16} className="text-terminal" />
-            <div className="text-xl font-black mt-2 text-white">{Math.min(100, history.length*5)}%</div>
-            <div className="text-[8px] text-white/20 uppercase font-bold tracking-widest mt-1">Status</div>
-         </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-[#050505] pb-32">
+      <div className={`sticky top-0 z-[100] p-6 border-b border-white/5 transition-all duration-700 backdrop-blur-xl ${timerState === 'SET' ? 'bg-cobalt/40' : timerState === 'REST' ? 'bg-magenta/40' : 'bg-black/90'}`}>
+        <div className="flex justify-between items-center mb-6">
+           <div className="text-[10px] font-black uppercase text-white/40 tracking-widest">{timerState}_PROTOCOL</div>
+           <button onClick={endSession} className="px-4 py-1.5 bg-red-500 text-black text-[10px] font-black uppercase italic shadow-[0_0_15px_rgba(239,68,68,0.4)] active:scale-95 transition-all"><Power size={12}/> End Session</button>
+        </div>
+        <div className="flex flex-col items-center">
+          <div className="text-8xl font-black italic tracking-tighter text-glow-cobalt text-white">{Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}</div>
+          <button onClick={() => setIsPaused(!isPaused)} className="mt-4 px-12 py-3 bg-white/10 text-[10px] font-black uppercase border border-white/10">{isPaused ? 'Resume' : 'Pause'}</button>
+        </div>
+      </div>
+      <div className="p-4 space-y-8 mt-6">
+        {session.cards.map((card) => (
+          <div key={card.id} className="space-y-4">
+            <div className="flex justify-between items-end border-l-2 border-cobalt pl-4">
+              <div><h3 className="text-lg font-black italic uppercase text-white/90">{card.exercise.name}</h3><p className="text-[9px] text-white/30 uppercase tracking-[0.2em] font-mono">{card.exercise.equipment}</p></div>
+              <button onClick={() => removeExercise(card.id)} className="text-white/10 p-2"><X size={16}/></button>
+            </div>
+            <div className="space-y-2">
+              {card.sets.map((set, idx) => {
+                const isActive = activeCardId === card.id && activeSetIndex === idx;
+                return (
+                  <div key={set.id} className={`glass p-4 border-l-2 flex items-center justify-between transition-all ${set.completed ? 'border-terminal opacity-30' : isActive ? 'border-cobalt glow-cobalt bg-cobalt/5' : 'border-white/10'}`}>
+                    <div className="flex gap-4">
+                       <span className={`text-[10px] font-mono ${isActive ? 'text-cobalt' : 'text-white/20'}`}>0{idx+1}</span>
+                       <div className="flex gap-4">
+                          <input type="number" value={set.weight} onChange={(e) => updateSet(card.id, set.id, 'weight', parseFloat(e.target.value))} className="w-14 bg-transparent text-xl font-black text-white outline-none" />
+                          <input type="number" value={set.reps} onChange={(e) => updateSet(card.id, set.id, 'reps', parseInt(e.target.value))} className="w-12 bg-transparent text-xl font-black text-white outline-none" />
+                       </div>
+                    </div>
+                    {!set.completed ? (
+                      <button onClick={() => isActive && timerState === 'SET' ? setTimeLeft(0) : setTracking(card.id, idx)} className={`px-6 py-2.5 text-[10px] font-black uppercase tracking-widest ${isActive && timerState === 'SET' ? 'bg-terminal text-black' : 'bg-cobalt text-white'}`}>{isActive && timerState === 'SET' ? 'Lifting' : 'Start'}</button>
+                    ) : <Check size={24} className="text-terminal" />}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
