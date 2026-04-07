@@ -1,21 +1,21 @@
 import { useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Camera, X, Check, Zap, Flame, Utensils } from 'lucide-react';
+import { Camera, X, Check, Zap, Flame, Utensils, Target } from 'lucide-react';
 import { useWorkoutStore } from '../store/useWorkoutStore';
 import MealNotes from './MealNotes';
 
 const SCANNED_ITEMS = [
-  { name: 'Grilled Chicken Breast', cal: 320, p: 48, c: 0, f: 8 },
-  { name: 'Whey Protein Shake', cal: 180, p: 30, c: 5, f: 2 },
-  { name: 'Salmon Fillet', cal: 420, p: 38, c: 0, f: 18 },
-  { name: 'Lean Beef & Rice', cal: 580, p: 42, c: 55, f: 12 },
-  { name: 'Greek Yogurt Bowl', cal: 240, p: 24, c: 18, f: 4 },
+  { id: 1, name: 'Premium Grilled Chicken', cal: 280, p: 52, c: 0, f: 6 },
+  { id: 2, name: 'Steamed Jasmine Rice', cal: 210, p: 4, c: 45, f: 1 },
+  { id: 3, name: 'Organic Avocado', cal: 160, p: 2, c: 8, f: 15 },
+  { id: 4, name: 'Prime Beef Fillet', cal: 350, p: 45, c: 0, f: 18 },
+  { id: 5, name: 'Whey Isolate Shake', cal: 140, p: 30, c: 2, f: 1 },
 ];
 
 export default function FuelVision() {
   const { addNutrition, nutrition } = useWorkoutStore();
   const [scanning, setScanning] = useState(false);
-  const [identifiedItem, setIdentifiedItem] = useState<typeof SCANNED_ITEMS[0] | null>(null);
+  const [identifiedItems, setIdentifiedItems] = useState<typeof SCANNED_ITEMS>([]);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
@@ -26,102 +26,94 @@ export default function FuelVision() {
       streamRef.current = stream;
       if (videoRef.current) videoRef.current.srcObject = stream;
       
-      // AI SIMULATION: Pick a random food after 2 seconds
+      // AI SIMULATION: Detect 3 items across the plate
       setTimeout(() => {
-        const food = SCANNED_ITEMS[Math.floor(Math.random() * SCANNED_ITEMS.length)];
-        setIdentifiedItem(food);
-      }, 2500);
-    } catch (e) {
-      setScanning(false);
-    }
+        const results = [...SCANNED_ITEMS].sort(() => 0.5 - Math.random()).slice(0, 3);
+        setIdentifiedItems(results);
+      }, 3000);
+    } catch (e) { setScanning(false); }
   }, []);
 
-  const confirmLog = () => {
-    if (identifiedItem) {
-      addNutrition({ 
-        name: identifiedItem.name, 
-        calories: identifiedItem.cal, 
-        protein: identifiedItem.p, 
-        carbs: identifiedItem.c, 
-        fats: identifiedItem.f, 
-        verified: true 
-      });
-    }
+  const confirmLogAll = () => {
+    identifiedItems.forEach(item => {
+      addNutrition({ name: item.name, calories: item.cal, protein: item.p, carbs: item.c, fats: item.f, verified: true });
+    });
     stopScanner();
   };
 
   const stopScanner = () => {
     streamRef.current?.getTracks().forEach(t => t.stop());
     setScanning(false);
-    setIdentifiedItem(null);
+    setIdentifiedItems([]);
   };
 
   return (
     <div className="min-h-screen bg-[#050505] p-4 pt-12 pb-24 space-y-6">
-      <div className="px-4 flex justify-between items-end">
+      <div className="px-4 flex justify-between items-center">
         <div>
-          <h2 className="text-xs font-black uppercase tracking-[0.4em] text-cobalt mb-1">Fuel_Vision_AI</h2>
-          <p className="text-[9px] text-white/30 uppercase tracking-widest font-mono">Status: Analysis_Standby</p>
+          <h2 className="text-xs font-black uppercase tracking-[0.4em] text-cobalt mb-1">Fuel_Analysis_HUD</h2>
+          <p className="text-[9px] text-white/20 font-mono">Sensors: Active_Multi_Scan</p>
         </div>
         <div className="text-right">
-           <div className="text-[9px] text-white/20 uppercase font-mono mb-1">Daily_Cals</div>
-           <div className="text-xl font-black italic text-glow-cobalt">{nutrition.reduce((s, n) => s + n.calories, 0)}</div>
+           <div className="text-[10px] font-black text-white/80">{nutrition.reduce((s, n) => s + n.calories, 0)} <span className="opacity-30">KCAL</span></div>
         </div>
       </div>
 
       <div className="px-4">
-        <button onClick={startScanner} className="w-full py-8 bg-cobalt text-black font-black uppercase tracking-[0.4em] glow-cobalt flex items-center justify-center gap-3 text-sm active:scale-95 transition-all">
-          <Camera size={22} /> Snap to Log
+        <button onClick={startScanner} className="w-full py-8 bg-cobalt text-black font-black uppercase tracking-[0.5em] glow-cobalt flex items-center justify-center gap-3 text-sm rounded-xl">
+          <Camera size={24} /> Snap Matrix
         </button>
       </div>
 
-      <div className="px-4"><MealNotes /></div>
+      <MealNotes />
 
       <AnimatePresence>
         {scanning && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] bg-black">
-            <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover opacity-70" />
+            <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover opacity-60" />
             
-            <div className="absolute inset-0 flex items-center justify-center">
-               <div className="w-72 h-72 border border-white/10 relative">
-                  <div className="absolute inset-x-0 h-0.5 bg-cobalt animate-scan shadow-[0_0_20px_#2563eb]" />
-                  <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-cobalt" />
-                  <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-cobalt" />
-               </div>
+            {/* Multi-Target Scan Animation */}
+            <div className="absolute inset-0">
+               {identifiedItems.length === 0 ? (
+                 <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-64 h-64 border border-white/10 relative overflow-hidden">
+                       <div className="absolute inset-x-0 h-1 bg-cobalt/50 animate-scan" />
+                    </div>
+                 </div>
+               ) : (
+                 identifiedItems.map((item, idx) => (
+                   <motion.div 
+                    key={item.id} 
+                    initial={{ scale: 0 }} animate={{ scale: 1 }}
+                    className="absolute p-4 border-2 border-cobalt bg-black/40 backdrop-blur-md"
+                    style={{ top: `${20 + idx * 20}%`, left: `${15 + idx * 10}%` }}
+                   >
+                      <div className="flex items-center gap-2 text-[10px] font-black text-cobalt uppercase mb-1">
+                        <Target size={12}/> Node_{idx+1}
+                      </div>
+                      <div className="text-xs font-bold text-white uppercase">{item.name}</div>
+                   </motion.div>
+                 ))
+               )}
             </div>
 
-            {identifiedItem && (
-               <motion.div initial={{ y: 100 }} animate={{ y: 0 }} className="absolute bottom-0 inset-x-0 glass-strong p-8 text-center border-t border-cobalt/30">
-                  <div className="text-[10px] font-mono text-cobalt uppercase tracking-[0.5em] mb-2 animate-pulse">Item_Identified</div>
-                  <h3 className="text-2xl font-black italic text-white uppercase tracking-tighter mb-6">{identifiedItem.name}</h3>
-                  
-                  <div className="grid grid-cols-4 gap-2 mb-8">
-                     <div className="bg-white/5 p-2 border-t border-white/10">
-                        <div className="text-lg font-black">{identifiedItem.cal}</div>
-                        <div className="text-[8px] text-white/30 uppercase">Cals</div>
-                     </div>
-                     <div className="bg-magenta/10 p-2 border-t border-magenta/30 text-magenta">
-                        <div className="text-lg font-black">{identifiedItem.p}g</div>
-                        <div className="text-[8px] uppercase font-black">Protein</div>
-                     </div>
-                     <div className="bg-white/5 p-2 border-t border-white/10 text-cobalt">
-                        <div className="text-lg font-black">{identifiedItem.c}g</div>
-                        <div className="text-[8px] uppercase">Carbs</div>
-                     </div>
-                     <div className="bg-white/5 p-2 border-t border-white/10 text-hazard">
-                        <div className="text-lg font-black">{identifiedItem.f}g</div>
-                        <div className="text-[8px] uppercase">Fats</div>
-                     </div>
+            {identifiedItems.length > 0 && (
+               <motion.div initial={{ y: 200 }} animate={{ y: 0 }} className="absolute bottom-0 inset-x-0 glass-strong p-8 border-t border-cobalt/40 rounded-t-3xl">
+                  <div className="text-[10px] font-black text-cobalt uppercase tracking-[0.4em] mb-4 text-center">Multi_Target_Detection_Success</div>
+                  <div className="space-y-2 mb-8">
+                     {identifiedItems.map(item => (
+                       <div key={item.id} className="flex justify-between items-center py-2 border-b border-white/5">
+                          <span className="text-xs font-bold text-white/80">{item.name}</span>
+                          <span className="text-xs text-magenta font-black">{item.p}g P</span>
+                       </div>
+                     ))}
                   </div>
-
                   <div className="flex gap-2">
-                    <button onClick={confirmLog} className="flex-1 bg-cobalt text-black py-4 font-black uppercase text-xs tracking-widest shadow-lg">Authorize Log</button>
+                    <button onClick={confirmLogAll} className="flex-1 bg-cobalt text-black py-4 font-black uppercase text-xs tracking-widest rounded-lg">Authorize Multi-Log</button>
                     <button onClick={stopScanner} className="px-6 bg-white/5 text-white/40"><X /></button>
                   </div>
                </motion.div>
             )}
-
-            <button onClick={stopScanner} className="absolute top-12 right-6 p-4 text-white/20"><X size={32}/></button>
           </motion.div>
         )}
       </AnimatePresence>
