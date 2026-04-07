@@ -1,17 +1,19 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, X, Check, Clock, Trash2, Power, RotateCcw } from 'lucide-react';
+import { Plus, X, Check, Clock, Trash2, Power, RotateCcw, Edit3 } from 'lucide-react';
 import { useWorkoutStore, triggerAlert } from '../store/useWorkoutStore';
 import { workoutRegistry } from '../data/workoutRegistry';
 import { hapticSetComplete, hapticTap, hapticRestDone } from '../services/haptics';
 
 export default function GhostLog() {
-  const { session, endSession, addExercise, removeExercise, addSet, removeSet, updateSet, completeSet, setDuration, restDuration, setDurations, activeCardId, activeSetIndex, setTracking } = useWorkoutStore();
+  const { session, endSession, addExercise, removeExercise, addSet, removeSet, updateSet, completeSet, setDuration, restDuration, setDurations, activeCardId, activeSetIndex, setTracking, scheduleNotes } = useWorkoutStore();
   const [timerState, setTimerState] = useState<'IDLE' | 'SET' | 'REST'>('IDLE');
   const [timeLeft, setTimeLeft] = useState(0);
   const [isPaused, setIsPaused] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
-  const [showTimerAdjust, setShowTimerAdjust] = useState(false);
+
+  const today = new Date().toISOString().split('T')[0];
+  const missionNote = scheduleNotes[today];
 
   useEffect(() => {
     let interval: any;
@@ -19,33 +21,29 @@ export default function GhostLog() {
       interval = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
     } else if (timeLeft === 0 && !isPaused) {
       if (timerState === 'SET') {
-        const currentCard = session?.cards.find(c => c.id === activeCardId);
-        const currentSet = currentCard?.sets[activeSetIndex];
-        if (currentCard && currentSet) { completeSet(activeCardId!, currentSet.id); hapticSetComplete(); }
-        setTimerState('REST'); setTimeLeft(restDuration);
-        triggerAlert('success');
+        const cCard = session?.cards.find(c => c.id === activeCardId);
+        if (cCard && cCard.sets[activeSetIndex]) { completeSet(activeCardId!, cCard.sets[activeSetIndex].id); hapticSetComplete(); }
+        setTimerState('REST'); setTimeLeft(restDuration); triggerAlert('success');
       } else if (timerState === 'REST') {
-        const currentCard = session?.cards.find(c => c.id === activeCardId);
-        const nextIndex = activeSetIndex + 1;
-        if (currentCard && nextIndex < currentCard.sets.length) {
-          setTracking(activeCardId!, nextIndex); setTimerState('SET'); setTimeLeft(setDuration); hapticRestDone();
-          triggerAlert('warning');
+        const cCard = session?.cards.find(c => c.id === activeCardId);
+        if (cCard && activeSetIndex + 1 < cCard.sets.length) {
+          setTracking(activeCardId!, activeSetIndex + 1); setTimerState('SET'); setTimeLeft(setDuration); hapticRestDone(); triggerAlert('warning');
         } else {
-          setTimerState('IDLE'); setIsPaused(true); setTracking(null, 0); hapticRestDone();
-          triggerAlert('success');
+          setTimerState('IDLE'); setIsPaused(true); setTracking(null, 0); hapticRestDone(); triggerAlert('success');
         }
       }
     }
     return () => clearInterval(interval);
   }, [timeLeft, isPaused, timerState, session, activeCardId, activeSetIndex, completeSet, restDuration, setDuration, setTracking]);
 
-  const startChain = (cardId: string, index: number) => {
-    setTracking(cardId, index); setTimerState('SET'); setTimeLeft(setDuration); setIsPaused(false); hapticTap();
-  };
+  const startChain = (cid: string, idx: number) => { setTracking(cid, idx); setTimerState('SET'); setTimeLeft(setDuration); setIsPaused(false); hapticTap(); };
 
   if (!session) return (
     <div className="h-screen flex items-center justify-center bg-[#050505] p-12 text-center">
-      <div><RotateCcw className="w-12 h-12 text-white/10 mx-auto mb-4 animate-spin-slow" /><p className="text-[10px] text-white/20 font-black uppercase tracking-[0.5em]">Awaiting_Sync_Link</p></div>
+      <div className="space-y-6">
+        <RotateCcw className="w-12 h-12 text-white/5 mx-auto animate-spin-slow" />
+        <p className="text-[10px] text-white/20 font-black uppercase tracking-[0.5em]">Awaiting_Link</p>
+      </div>
     </div>
   );
 
@@ -55,17 +53,23 @@ export default function GhostLog() {
         timerState === 'SET' ? 'bg-cobalt/40' : timerState === 'REST' ? 'bg-magenta/40' : 'bg-black/90'
       }`}>
         <div className="flex justify-between items-center mb-6">
-          <button onClick={() => setShowTimerAdjust(true)} className="flex items-center gap-2 text-[10px] font-black uppercase text-white/60"><Clock size={14} className="text-cobalt" /> Intervals</button>
-          <button onClick={endSession} className="flex items-center gap-2 px-4 py-1.5 bg-red-500 text-black text-[10px] font-black uppercase tracking-tighter italic shadow-[0_0_15px_rgba(239,68,68,0.4)]"><Power size={12}/> End Session</button>
+           <div className="flex items-center gap-2 text-[10px] font-black uppercase text-white/40"><Clock size={14} className="text-cobalt" /> {timerState}</div>
+           <button onClick={endSession} className="flex items-center gap-2 px-4 py-1.5 bg-red-500 text-black text-[10px] font-black uppercase italic shadow-[0_0_15px_rgba(239,68,68,0.4)] active:scale-95 transition-all"><Power size={12}/> End Session</button>
         </div>
         <div className="flex flex-col items-center">
-          <div className="text-[9px] font-black tracking-[0.5em] uppercase text-white/40 mb-1">{timerState === 'IDLE' ? 'Link Standby' : timerState}</div>
           <div className="text-8xl font-black italic tracking-tighter text-glow-cobalt text-white">{Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}</div>
-          <div className="mt-4 flex gap-4"><button onClick={() => setIsPaused(!isPaused)} className="px-10 py-2.5 bg-white/10 text-[10px] font-black uppercase tracking-[0.2em] border border-white/10">{isPaused ? 'Resume' : 'Pause'}</button></div>
+          <div className="mt-4 flex gap-4"><button onClick={() => setIsPaused(!isPaused)} className="px-12 py-3 bg-white/10 text-[10px] font-black uppercase tracking-[0.2em] border border-white/10 active:bg-white/20">{isPaused ? 'Resume' : 'Pause'}</button></div>
         </div>
       </div>
 
-      <div className="p-4 space-y-12 mt-6">
+      <div className="p-4 space-y-8 mt-6">
+        {missionNote && (
+          <div className="glass p-4 border-l-2 border-magenta/40 mb-6">
+            <div className="flex items-center gap-2 mb-2 text-[9px] font-black text-magenta uppercase"><Edit3 size={12}/> Mission_Protocol</div>
+            <p className="text-xs text-white/60 font-mono italic leading-relaxed">{missionNote}</p>
+          </div>
+        )}
+
         {session.cards.map((card) => (
           <div key={card.id} className="space-y-4">
             <div className="flex justify-between items-end border-l-2 border-cobalt pl-4">
@@ -77,53 +81,42 @@ export default function GhostLog() {
                 const isActive = activeCardId === card.id && activeSetIndex === idx;
                 return (
                   <div key={set.id} className={`glass p-4 border-l-2 flex items-center justify-between transition-all ${
-                    set.completed ? 'border-terminal opacity-30' : isActive ? 'border-cobalt glow-cobalt bg-cobalt/5' : 'border-white/10'
+                    set.completed ? 'border-terminal opacity-30' : isActive ? 'border-cobalt glow-cobalt bg-cobalt/5 shadow-[0_0_20px_rgba(37,99,235,0.1)]' : 'border-white/10'
                   }`}>
                     <div className="flex gap-5 items-center">
                       <span className={`text-[10px] font-mono ${isActive ? 'text-cobalt' : 'text-white/20'}`}>0{idx+1}</span>
                       <div className="flex gap-4">
                         <input type="number" value={set.weight} onChange={(e) => updateSet(card.id, set.id, 'weight', parseFloat(e.target.value))} className="w-14 bg-transparent text-xl font-black text-white outline-none" />
-                        <span className="text-white/10 self-center">×</span>
+                        <span className="text-white/10 self-center font-bold">×</span>
                         <input type="number" value={set.reps} onChange={(e) => updateSet(card.id, set.id, 'reps', parseInt(e.target.value))} className="w-12 bg-transparent text-xl font-black text-white outline-none" />
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
                       {!set.completed ? (
                         <>
-                          <button onClick={() => isActive && timerState === 'SET' ? setTimeLeft(0) : startChain(card.id, idx)} className={`px-5 py-2.5 text-[10px] font-black uppercase tracking-widest ${isActive && timerState === 'SET' ? 'bg-terminal text-black animate-pulse' : 'bg-cobalt text-white'}`}>{isActive && timerState === 'SET' ? 'Lifting' : 'Start'}</button>
-                          <button onClick={() => removeSet(card.id, set.id)} className="p-2 text-white/10"><Trash2 size={16}/></button>
+                          <button onClick={() => isActive && timerState === 'SET' ? setTimeLeft(0) : startChain(card.id, idx)} className={`px-6 py-2.5 text-[10px] font-black uppercase tracking-widest ${isActive && timerState === 'SET' ? 'bg-terminal text-black animate-pulse' : 'bg-cobalt text-white shadow-lg shadow-cobalt/20'}`}>{isActive && timerState === 'SET' ? 'Log' : 'Start'}</button>
+                          <button onClick={() => removeSet(card.id, set.id)} className="p-2 text-white/10 hover:text-red-500"><Trash2 size={16}/></button>
                         </>
-                      ) : <Check size={24} className="text-terminal" />}
+                      ) : <Check size={28} className="text-terminal drop-shadow-[0_0_8px_rgba(0,255,136,0.5)]" />}
                     </div>
                   </div>
                 );
               })}
             </div>
-            <button onClick={() => addSet(card.id)} className="w-full py-3 border border-dashed border-white/10 text-[9px] text-white/20 uppercase tracking-[0.3em] font-bold">+ New Data Entry</button>
+            <button onClick={() => addSet(card.id)} className="w-full py-3 border border-dashed border-white/10 text-[9px] text-white/20 uppercase tracking-[0.3em] font-bold">+ New Set Entry</button>
           </div>
         ))}
       </div>
 
-      <button onClick={() => setShowAdd(true)} className="fixed bottom-24 right-6 h-16 w-16 bg-cobalt text-black flex items-center justify-center glow-cobalt z-[110] shadow-2xl"><Plus size={28}/></button>
+      <button onClick={() => setShowAdd(true)} className="fixed bottom-24 right-6 h-16 w-16 bg-cobalt text-black flex items-center justify-center glow-cobalt z-[110] shadow-[0_0_30px_rgba(37,99,235,0.4)] active:scale-95 transition-all"><Plus size={32}/></button>
 
       <AnimatePresence>
-        {showTimerAdjust && (
-          <motion.div initial={{ opacity: 0, y: 100 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 100 }} className="fixed inset-0 z-[200] bg-black/98 p-8 flex flex-col justify-center">
-             <h2 className="text-2xl font-black italic uppercase text-white mb-10 text-center font-mono">Interval Adjust</h2>
-             <div className="space-y-12">
-               <ScrollSelector label="Lifting Window" value={setDuration} onChange={(v: number) => setDurations(v, restDuration)} />
-               <ScrollSelector label="Recovery Window" value={restDuration} onChange={(v: number) => setDurations(setDuration, v)} />
-             </div>
-             <button onClick={() => setShowTimerAdjust(false)} className="mt-16 w-full py-5 bg-white text-black font-black uppercase tracking-widest">Update Protocol</button>
-          </motion.div>
-        )}
-
         {showAdd && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[120] bg-black/98 p-6 overflow-y-auto">
-             <div className="flex justify-between items-center mb-10 font-black italic uppercase text-white"><h2>Sync Protocols</h2><button onClick={() => setShowAdd(false)} className="p-3 bg-white/5 text-white"><X/></button></div>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[120] bg-black/98 p-6 overflow-y-auto no-scrollbar">
+             <div className="flex justify-between items-center mb-10 font-black italic uppercase text-white"><h2>Sync Protocols</h2><button onClick={() => setShowAdd(false)} className="p-3 bg-white/5 text-white active:bg-white/10"><X size={24}/></button></div>
              <div className="grid gap-2">
                 {workoutRegistry.map(ex => (
-                  <button key={ex.id} onClick={() => { addExercise(ex); setShowAdd(false); hapticTap(); }} className="glass p-5 text-left border-white/5 hover:border-cobalt/40 transition-colors">
+                  <button key={ex.id} onClick={() => { addExercise(ex); setShowAdd(false); hapticTap(); }} className="glass p-5 text-left border-white/5 hover:border-cobalt transition-colors">
                     <div className="text-[9px] text-cobalt font-mono uppercase mb-1">{ex.category}</div>
                     <div className="font-bold text-lg uppercase tracking-tight text-white/80">{ex.name}</div>
                   </button>
@@ -132,20 +125,6 @@ export default function GhostLog() {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
-  );
-}
-
-function ScrollSelector({ label, value, onChange }: any) {
-  const mins = Math.floor(value / 60); const secs = value % 60;
-  return (
-    <div className="flex flex-col items-center">
-      <span className="text-[10px] font-black uppercase text-white/30 mb-4 tracking-[0.2em]">{label}</span>
-      <div className="flex items-center gap-6">
-        <div className="flex flex-col items-center"><button onClick={() => onChange(Math.max(0, value - 60))} className="p-3 text-white/20"><Plus size={16} className="rotate-45"/></button><div className="text-5xl font-black text-white font-mono">{mins}m</div><button onClick={() => onChange(value + 60)} className="p-3 text-white/20"><Plus size={16}/></button></div>
-        <div className="text-4xl font-black text-white/10">:</div>
-        <div className="flex flex-col items-center"><button onClick={() => onChange(Math.max(0, value - 5))} className="p-3 text-white/20"><Plus size={16} className="rotate-45"/></button><div className="text-5xl font-black text-white font-mono">{String(secs).padStart(2, '0')}s</div><button onClick={() => onChange(value + 5)} className="p-3 text-white/20"><Plus size={16}/></button></div>
-      </div>
     </div>
   );
 }
