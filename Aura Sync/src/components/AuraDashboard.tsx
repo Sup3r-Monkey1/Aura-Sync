@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
-import { Brain, Activity, Flame, Zap, Watch, Edit2, Clock, Timer, User, ShieldCheck, ChevronRight } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Brain, Activity, Flame, Zap, Watch, Edit2, Timer, Lock, ShieldCheck } from 'lucide-react';
 import { useWorkoutStore } from '../store/useWorkoutStore';
 import { getZoneColor, getZoneLabel } from '../engine/readiness';
 import { workoutRegistry } from '../data/workoutRegistry';
@@ -23,13 +23,14 @@ export default function AuraDashboard() {
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [session, sessionLimit]);
+  }, [session, sessionLimit, endSession]);
+
+  useEffect(() => { refreshReadiness(); }, [refreshReadiness]);
 
   const zoneColor = getZoneColor(readiness.zone);
 
   return (
     <div className="min-h-screen bg-[#050505] pb-24 overflow-x-hidden">
-      {/* 👤 USER PROFILE HEADER */}
       <div className="px-4 pt-12 pb-6 flex justify-between items-start">
         <div onClick={() => setIsEditingProfile(true)} className="cursor-pointer">
           <div className="flex items-center gap-2 mb-1">
@@ -44,30 +45,25 @@ export default function AuraDashboard() {
         </div>
       </div>
 
-      {/* ⏱️ TACTICAL SESSION COMMAND */}
       <div className="px-4 mb-6">
-        <div className="glass p-5 border-l-2 border-cobalt relative">
+        <div className="glass p-5 border-l-2 border-cobalt">
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-2 text-[10px] font-black uppercase text-white/40"><Timer size={14} className="text-cobalt"/> Session_Timer</div>
-            {session && <div className="text-sm font-mono text-cobalt font-black animate-blink">
+            {session && <div className="text-sm font-mono text-cobalt font-black animate-pulse">
               {Math.floor(timeLeft/3600)}h {Math.floor((timeLeft%3600)/60)}m {timeLeft%60}s
             </div>}
           </div>
-          
           {!session ? (
             <div className="space-y-4">
                <input type="range" min="300" max="36000" step="300" value={sessionLimit} onChange={(e) => setSessionLimit(Number(e.target.value))} className="w-full accent-cobalt" />
-               <div className="flex justify-between text-[10px] font-mono text-white/40 uppercase"><span>Min: 5m</span><span>Limit: {(sessionLimit/3600).toFixed(1)} hrs</span><span>Max: 10h</span></div>
+               <div className="flex justify-between text-[10px] font-mono text-white/40 uppercase"><span>5m</span><span>{(sessionLimit/3600).toFixed(1)} hrs</span><span>10h</span></div>
             </div>
           ) : (
-            <div className="flex gap-2">
-               <button onClick={endSession} className="flex-1 py-3 bg-red-500/20 text-red-500 border border-red-500/40 font-black text-[10px] uppercase tracking-widest">Abort Session</button>
-            </div>
+            <button onClick={endSession} className="w-full py-3 bg-red-500/20 text-red-500 border border-red-500/40 font-black text-[10px] uppercase tracking-widest">Abort Session</button>
           )}
         </div>
       </div>
 
-      {/* 🎯 TARGET SUGGESTION ENGINE */}
       <div className="px-4 mb-6">
         <div className="glass p-5">
            <div className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] mb-4">Tactical Suggestions</div>
@@ -89,44 +85,45 @@ export default function AuraDashboard() {
         </div>
       </div>
 
-      {/* 🛰️ BIOMETRICS LOCK */}
       <div className="px-4 mb-6">
         {watchConnected ? (
-          <div className="glass p-5 border-l-2 border-terminal">
-            <div className="flex justify-between items-start">
-               <div>
-                  <div className="text-[10px] uppercase tracking-[0.3em] text-white/40 mb-1">HRV_Live</div>
-                  <div className="text-3xl font-black text-terminal italic">64<span className="text-xs opacity-30">ms</span></div>
-               </div>
-               <ShieldCheck className="text-terminal" size={20} />
-            </div>
+          <div className="glass p-5 border-l-2 border-terminal flex justify-between items-start">
+             <div><div className="text-[10px] uppercase tracking-[0.3em] text-white/40 mb-1">HRV_Live</div><div className="text-3xl font-black text-terminal italic">64ms</div></div>
+             <ShieldCheck className="text-terminal" size={20} />
           </div>
         ) : (
-          <button onClick={connectWatch} className="w-full glass p-6 border-dashed border-white/10 flex flex-col items-center gap-3">
-             <Watch className="text-white/20 animate-pulse" />
-             <span className="text-[10px] font-black text-cobalt uppercase tracking-[0.3em]">Sync Bio-Sensor for HRV</span>
-          </button>
+          <button onClick={connectWatch} className="w-full glass p-6 border-dashed border-white/10 flex flex-col items-center gap-3"><Watch className="text-white/20" /><span className="text-[10px] font-black text-cobalt uppercase tracking-[0.3em]">Sync Bio-Sensor for HRV</span></button>
         )}
       </div>
 
+      {!session && <div className="px-4 mb-8"><motion.button whileTap={{ scale: 0.97 }} onClick={() => startSession()} className="w-full py-5 bg-cobalt text-black font-black text-sm uppercase tracking-widest glow-cobalt">Initiate Link</motion.button></div>}
       <div className="px-4"><BlackBoxTerminal /></div>
 
-      {/* PROFILE MODAL */}
       <AnimatePresence>
         {isEditingProfile && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[200] bg-black/95 p-8 flex flex-col justify-center items-center">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] bg-black/95 p-8 flex flex-col justify-center items-center">
              <div className="w-full max-w-xs space-y-6">
-                <h2 className="text-2xl font-black italic uppercase text-white mb-8 border-l-4 border-cobalt pl-4">Update Profile</h2>
+                <h2 className="text-2xl font-black italic uppercase text-white mb-8 border-l-4 border-cobalt pl-4">Protocol Identity</h2>
                 <div className="space-y-4">
                    <label className="block"><span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Name</span><input className="w-full bg-white/5 p-4 border border-white/10 text-white outline-none" value={userName} onChange={(e)=>setUserName(e.target.value)}/></label>
                    <label className="block"><span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Age</span><input type="number" className="w-full bg-white/5 p-4 border border-white/10 text-white outline-none" value={userAge} onChange={(e)=>setUserStats(Number(e.target.value), userWeight)}/></label>
                    <label className="block"><span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Weight (Lbs)</span><input type="number" className="w-full bg-white/5 p-4 border border-white/10 text-white outline-none" value={userWeight} onChange={(e)=>setUserStats(userAge, Number(e.target.value))}/></label>
                 </div>
-                <button onClick={()=>setIsEditingProfile(false)} className="w-full py-4 bg-cobalt text-black font-black uppercase tracking-widest mt-8">Save & Close</button>
+                <button onClick={()=>setIsEditingProfile(false)} className="w-full py-4 bg-cobalt text-black font-black uppercase mt-8 tracking-widest">Authorize Changes</button>
              </div>
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+function HudStat({ icon: Icon, label, value, color }: any) {
+  return (
+    <div className="glass p-3 text-center border-t border-white/5">
+      <Icon className="w-3.5 h-3.5 mx-auto mb-1.5 opacity-40" style={{ color }} />
+      <div className="text-sm font-black italic tracking-tighter" style={{ color }}>{value}</div>
+      <div className="text-[8px] text-white/20 uppercase font-bold">{label}</div>
     </div>
   );
 }
