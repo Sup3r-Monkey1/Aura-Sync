@@ -5,68 +5,28 @@ import { createEmptyHeatmap, addHeatFromExercise, applyDecay } from '../engine/h
 import { calculateReadiness, simulateHRV, simulateSleep } from '../engine/readiness';
 import { isPR } from '../engine/overload';
 
-// 🔊 Tactical Audio Engine
-export const triggerAlert = (type: 'success' | 'warning') => {
-  try {
-    if ('vibrate' in navigator) navigator.vibrate(type === 'success' ? [100, 50, 100] : [300]);
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = 'sine'; osc.frequency.setValueAtTime(type === 'success' ? 880 : 440, ctx.currentTime);
-    gain.gain.setValueAtTime(0.1, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.5);
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.start(); osc.stop(ctx.currentTime + 0.5);
-  } catch (e) {}
-};
-
 interface WorkoutState {
-  userName: string;
-  userAge: number;
-  userWeight: number;
-  session: WorkoutSession | null;
-  sessionLimit: number;
-  isResting: boolean;
-  restSeconds: number;
-  setDuration: number;
-  restDuration: number;
-  activeCardId: string | null;
-  activeSetIndex: number;
-  history: SessionHistory[];
-  muscleHeat: MuscleHeat[];
-  muscleVolume: Record<string, number>; 
-  nutrition: NutritionEntry[];
-  readiness: ReadinessScore;
-  terminal: TerminalEvent[];
-  evolutionXP: number;
-  watchConnected: boolean;
-  schedule: Record<string, 'gym' | 'home' | 'rest'>;
-  scheduleNotes: Record<string, string>;
-  dailyProtocols: Record<string, string[]>; 
-  ghostVolume: number;
+  userName: string; userAge: number; userWeight: number;
+  session: WorkoutSession | null; sessionLimit: number;
+  isResting: boolean; restSeconds: number;
+  setDuration: number; restDuration: number;
+  activeCardId: string | null; activeSetIndex: number;
+  history: SessionHistory[]; muscleHeat: MuscleHeat[]; muscleVolume: Record<string, number>;
+  nutrition: NutritionEntry[]; readiness: ReadinessScore;
+  terminal: TerminalEvent[]; evolutionXP: number; watchConnected: boolean;
+  mealNotes: string; protocolNotes: string; schedule: Record<string, 'gym' | 'home' | 'rest'>;
+  scheduleNotes: Record<string, string>; dailyProtocols: Record<string, string[]>; ghostVolume: number;
 
-  setUserName: (n: string) => void;
-  setUserStats: (a: number, w: number) => void;
-  setSessionLimit: (s: number) => void;
-  startSession: (initialExercises?: Exercise[]) => void;
-  endSession: () => void;
-  addExercise: (ex: Exercise) => void;
-  removeExercise: (id: string) => void;
-  addSet: (cid: string) => void;
-  removeSet: (cid: string, sid: string) => void;
+  setUserName: (n: string) => void; setUserStats: (a: number, w: number) => void; setSessionLimit: (s: number) => void;
+  startSession: (exs?: Exercise[]) => void; endSession: () => void;
+  addExercise: (ex: Exercise) => void; removeExercise: (id: string) => void;
+  addSet: (cid: string) => void; removeSet: (cid: string, sid: string) => void;
   updateSet: (cid: string, sid: string, f: 'weight'|'reps', v: number) => void;
-  completeSet: (cid: string, sid: string) => void;
-  setTracking: (id: string | null, i: number) => void;
-  setDurations: (s: number, r: number) => void;
-  startRest: (s: number) => void;
-  stopRest: () => void;
-  addNutrition: (n: any) => void;
-  updateSchedule: (d: string, t: any) => void;
-  updateDateNote: (d: string, n: string) => void;
-  toggleDailyExercise: (day: string, id: string) => void;
-  connectWatch: () => Promise<void>;
-  decayHeatmap: () => void;
-  refreshReadiness: () => void;
-  hardReset: () => void;
+  completeSet: (cid: string, sid: string) => void; setTracking: (id: string | null, i: number) => void;
+  setDurations: (s: number, r: number) => void; startRest: (s: number) => void; stopRest: () => void;
+  addNutrition: (n: any) => void; updateMealNotes: (m: string) => void; updateSchedule: (d: string, t: any) => void;
+  updateDateNote: (d: string, n: string) => void; toggleDailyExercise: (day: string, id: string) => void;
+  connectWatch: () => Promise<void>; decayHeatmap: () => void; refreshReadiness: () => void; hardReset: () => void;
 }
 
 export const useWorkoutStore = create<WorkoutState>()(
@@ -79,19 +39,18 @@ export const useWorkoutStore = create<WorkoutState>()(
       history: [], muscleHeat: createEmptyHeatmap(), muscleVolume: {},
       nutrition: [], readiness: calculateReadiness(simulateHRV(), simulateSleep(), 0),
       terminal: [], evolutionXP: 0, watchConnected: false,
-      schedule: {}, scheduleNotes: {}, dailyProtocols: {}, ghostVolume: 0,
+      schedule: {}, scheduleNotes: {}, dailyProtocols: {}, ghostVolume: 0, mealNotes: "", protocolNotes: "",
 
       setUserName: (userName) => set({ userName }),
       setUserStats: (userAge, userWeight) => set({ userAge, userWeight }),
       setSessionLimit: (sessionLimit) => set({ sessionLimit }),
 
       startSession: (initialExercises) => {
-        const initialCards: ExerciseCard[] = (initialExercises || []).map(ex => ({
-          id: `c-${Date.now()}-${ex.id}`,
-          exercise: ex,
+        const cards: ExerciseCard[] = (initialExercises || []).map(ex => ({
+          id: `c-${Date.now()}-${ex.id}`, exercise: ex,
           sets: [1,2,3].map(i => ({ id: `s-${Date.now()}-${ex.id}-${i}`, weight: ex.defaultWeight, reps: ex.defaultReps, completed: false }))
         }));
-        set({ session: { id: `ws-${Date.now()}`, startedAt: Date.now(), cards: initialCards } });
+        set({ session: { id: `ws-${Date.now()}`, startedAt: Date.now(), cards } });
       },
 
       endSession: () => {
@@ -102,15 +61,12 @@ export const useWorkoutStore = create<WorkoutState>()(
           sets: c.sets.filter(s => s.completed).map(s => ({ weight: s.weight, reps: s.reps })),
           totalVolume: c.sets.filter(s => s.completed).reduce((sum, s) => sum + s.weight * s.reps, 0)
         })).filter(e => e.sets.length > 0);
-        
-        const sessionVol = newEntries.reduce((s, e) => s + e.totalVolume, 0);
         set({
           session: null, history: [...history, ...newEntries],
-          evolutionXP: evolutionXP + Math.round(sessionVol / 100),
-          ghostVolume: ghostVolume + (sessionVol * (0.95 + Math.random() * 0.1)),
+          evolutionXP: evolutionXP + Math.round(newEntries.reduce((s,e)=>s+e.totalVolume, 0) / 100),
+          ghostVolume: ghostVolume + (newEntries.reduce((s,e)=>s+e.totalVolume, 0) * 0.98),
           activeCardId: null, activeSetIndex: 0
         });
-        triggerAlert('success');
       },
 
       addExercise: (ex) => {
@@ -130,9 +86,8 @@ export const useWorkoutStore = create<WorkoutState>()(
         const card = session.cards.find(c => c.id === cid);
         const setData = card?.sets.find(s => s.id === sid);
         if (!card || !setData) return;
-        const setVol = setData.weight * setData.reps;
         const newMuscleVol = { ...muscleVolume };
-        card.exercise.primaryMuscles.forEach(m => { newMuscleVol[m] = (newMuscleVol[m] || 0) + setVol; });
+        card.exercise.primaryMuscles.forEach(m => { newMuscleVol[m] = (newMuscleVol[m] || 0) + (setData.weight * setData.reps); });
         set({
           session: { ...session, cards: session.cards.map(c => c.id !== cid ? c : { ...c, sets: c.sets.map(s => s.id === sid ? { ...s, completed: true, timestamp: Date.now() } : s) }) },
           muscleHeat: addHeatFromExercise(muscleHeat, card.exercise, 1),
@@ -145,6 +100,7 @@ export const useWorkoutStore = create<WorkoutState>()(
       startRest: (s) => set({ isResting: true, restSeconds: s }),
       stopRest: () => set({ isResting: false }),
       addNutrition: (n) => set({ nutrition: [...get().nutrition, { ...n, id: `n-${Date.now()}`, timestamp: Date.now() }], evolutionXP: get().evolutionXP + 5 }),
+      updateMealNotes: (m) => set({ mealNotes: m }),
       updateSchedule: (date, type) => set({ schedule: { ...get().schedule, [date]: type } }),
       updateDateNote: (date, note) => set({ scheduleNotes: { ...get().scheduleNotes, [date]: note } }),
       toggleDailyExercise: (day, id) => {
