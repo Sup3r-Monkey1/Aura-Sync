@@ -227,6 +227,24 @@ export default function AuraDashboard() {
       <div className="px-4">
         <BlackBoxTerminal />
       </div>
+{/* SYSTEM RESET (DANGER ZONE) */}
+      <div className="px-4 mt-12 pb-12">
+        <div className="border border-red-900/20 bg-red-900/5 p-4">
+          <h4 className="text-[10px] font-black tracking-widest text-red-500/50 uppercase mb-3">
+            System Maintenance
+          </h4>
+          <button
+            onClick={() => {
+              if (window.confirm("⚠️ WARNING: This will permanently wipe your Aura XP, History, and Stats. Proceed?")) {
+                useWorkoutStore.getState().hardReset();
+              }
+            }}
+            className="text-[9px] font-bold text-red-500/40 hover:text-red-500 uppercase tracking-tighter transition-colors"
+          >
+            Execute Hard Reset / Wipe Local Storage
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
