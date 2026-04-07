@@ -6,7 +6,7 @@ import { workoutRegistry } from '../data/workoutRegistry';
 import { hapticSetComplete, hapticTap, hapticRestDone } from '../services/haptics';
 
 export default function GhostLog() {
-  const { session, endSession, addExercise, removeExercise, addSet, removeSet, updateSet, completeSet, setDuration, restDuration, setDurations, activeCardId, activeSetIndex, setTracking, addTerminalEvent } = useWorkoutStore();
+  const { session, endSession, addExercise, removeExercise, addSet, removeSet, updateSet, completeSet, setDuration, restDuration, setDurations, activeCardId, activeSetIndex, setTracking } = useWorkoutStore();
   const [timerState, setTimerState] = useState<'IDLE' | 'SET' | 'REST'>('IDLE');
   const [timeLeft, setTimeLeft] = useState(0);
   const [isPaused, setIsPaused] = useState(true);
@@ -44,22 +44,18 @@ export default function GhostLog() {
   };
 
   if (!session) return (
-    <div className="h-screen flex items-center justify-center bg-[#050505]">
-      <div className="text-center">
-        <RotateCcw className="w-12 h-12 text-white/10 mx-auto mb-4 animate-spin-slow" />
-        <p className="text-[10px] text-white/20 font-black uppercase tracking-[0.5em]">Awaiting_Link</p>
-      </div>
+    <div className="h-screen flex items-center justify-center bg-[#050505] p-12 text-center">
+      <div><RotateCcw className="w-12 h-12 text-white/10 mx-auto mb-4 animate-spin-slow" /><p className="text-[10px] text-white/20 font-black uppercase tracking-[0.5em]">Awaiting_Sync_Link</p></div>
     </div>
   );
 
   return (
     <div className="min-h-screen bg-[#050505] pb-32 overflow-x-hidden">
-      {/* 🛡️ HUD TIMER (IMMUTABLE FRONT-ROW) */}
       <div className={`sticky top-0 z-[100] p-6 border-b border-white/5 transition-colors duration-700 backdrop-blur-xl ${
         timerState === 'SET' ? 'bg-cobalt/40' : timerState === 'REST' ? 'bg-magenta/40' : 'bg-black/90'
       }`}>
         <div className="flex justify-between items-center mb-6">
-          <button onClick={() => setShowTimerAdjust(true)} className="flex items-center gap-2 text-[10px] font-black uppercase text-white/60"><Clock size={14} className="text-cobalt" /> Config</button>
+          <button onClick={() => setShowTimerAdjust(true)} className="flex items-center gap-2 text-[10px] font-black uppercase text-white/60"><Clock size={14} className="text-cobalt" /> Intervals</button>
           <button onClick={endSession} className="flex items-center gap-2 px-4 py-1.5 bg-red-500 text-black text-[10px] font-black uppercase tracking-tighter italic shadow-[0_0_15px_rgba(239,68,68,0.4)]"><Power size={12}/> End Session</button>
         </div>
         <div className="flex flex-col items-center">
@@ -113,18 +109,18 @@ export default function GhostLog() {
       <AnimatePresence>
         {showTimerAdjust && (
           <motion.div initial={{ opacity: 0, y: 100 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 100 }} className="fixed inset-0 z-[200] bg-black/98 p-8 flex flex-col justify-center">
-             <h2 className="text-2xl font-black italic uppercase text-white mb-10 text-center">Interval Adjust</h2>
+             <h2 className="text-2xl font-black italic uppercase text-white mb-10 text-center font-mono">Interval Adjust</h2>
              <div className="space-y-12">
-               <ScrollSelector label="Set Lifting Window" value={setDuration} onChange={(v: number) => setDurations(v, restDuration)} />
-               <ScrollSelector label="Rest Recovery Window" value={restDuration} onChange={(v: number) => setDurations(setDuration, v)} />
+               <ScrollSelector label="Lifting Window" value={setDuration} onChange={(v: number) => setDurations(v, restDuration)} />
+               <ScrollSelector label="Recovery Window" value={restDuration} onChange={(v: number) => setDurations(setDuration, v)} />
              </div>
-             <button onClick={() => setShowTimerAdjust(false)} className="mt-16 w-full py-5 bg-white text-black font-black uppercase tracking-widest">Update Protocols</button>
+             <button onClick={() => setShowTimerAdjust(false)} className="mt-16 w-full py-5 bg-white text-black font-black uppercase tracking-widest">Update Protocol</button>
           </motion.div>
         )}
 
         {showAdd && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[120] bg-black/98 p-6 overflow-y-auto">
-             <div className="flex justify-between items-center mb-10"><h2 className="text-2xl font-black italic uppercase text-white">Sync Protocols</h2><button onClick={() => setShowAdd(false)} className="p-3 bg-white/5 text-white"><X/></button></div>
+             <div className="flex justify-between items-center mb-10 font-black italic uppercase text-white"><h2>Sync Protocols</h2><button onClick={() => setShowAdd(false)} className="p-3 bg-white/5 text-white"><X/></button></div>
              <div className="grid gap-2">
                 {workoutRegistry.map(ex => (
                   <button key={ex.id} onClick={() => { addExercise(ex); setShowAdd(false); hapticTap(); }} className="glass p-5 text-left border-white/5 hover:border-cobalt/40 transition-colors">
@@ -146,17 +142,9 @@ function ScrollSelector({ label, value, onChange }: any) {
     <div className="flex flex-col items-center">
       <span className="text-[10px] font-black uppercase text-white/30 mb-4 tracking-[0.2em]">{label}</span>
       <div className="flex items-center gap-6">
-        <div className="flex flex-col items-center">
-          <button onClick={() => onChange(Math.max(0, value - 60))} className="p-3 text-white/20"><Plus size={16} className="rotate-45"/></button>
-          <div className="text-5xl font-black text-white font-mono">{mins}m</div>
-          <button onClick={() => onChange(value + 60)} className="p-3 text-white/20"><Plus size={16}/></button>
-        </div>
+        <div className="flex flex-col items-center"><button onClick={() => onChange(Math.max(0, value - 60))} className="p-3 text-white/20"><Plus size={16} className="rotate-45"/></button><div className="text-5xl font-black text-white font-mono">{mins}m</div><button onClick={() => onChange(value + 60)} className="p-3 text-white/20"><Plus size={16}/></button></div>
         <div className="text-4xl font-black text-white/10">:</div>
-        <div className="flex flex-col items-center">
-          <button onClick={() => onChange(Math.max(0, value - 5))} className="p-3 text-white/20"><Plus size={16} className="rotate-45"/></button>
-          <div className="text-5xl font-black text-white font-mono">{String(secs).padStart(2, '0')}s</div>
-          <button onClick={() => onChange(value + 5)} className="p-3 text-white/20"><Plus size={16}/></button>
-        </div>
+        <div className="flex flex-col items-center"><button onClick={() => onChange(Math.max(0, value - 5))} className="p-3 text-white/20"><Plus size={16} className="rotate-45"/></button><div className="text-5xl font-black text-white font-mono">{String(secs).padStart(2, '0')}s</div><button onClick={() => onChange(value + 5)} className="p-3 text-white/20"><Plus size={16}/></button></div>
       </div>
     </div>
   );
