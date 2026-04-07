@@ -5,6 +5,24 @@ import { createEmptyHeatmap, addHeatFromExercise, applyDecay } from '../engine/h
 import { calculateReadiness, simulateHRV, simulateSleep } from '../engine/readiness';
 import { isPR } from '../engine/overload';
 
+// 🔊 STANDALONE NAMED EXPORT (MUST BE AT TOP FOR BUILD STABILITY)
+export const triggerAlert = (type: 'success' | 'warning') => {
+  try {
+    if ('vibrate' in navigator) navigator.vibrate(type === 'success' ? [100, 50, 100] : [300]);
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(type === 'success' ? 880 : 440, ctx.currentTime);
+    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.5);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.5);
+  } catch (e) {}
+};
+
 interface WorkoutState {
   userName: string; userAge: number; userWeight: number;
   session: WorkoutSession | null; sessionLimit: number;
@@ -54,7 +72,7 @@ export const useWorkoutStore = create<WorkoutState>()(
       },
 
       endSession: () => {
-        const { session, history, evolutionXP, ghostVolume, muscleVolume } = get();
+        const { session, history, evolutionXP, ghostVolume } = get();
         if (!session) return;
         const newEntries = session.cards.map(c => ({
           exerciseId: c.exercise.id, date: Date.now(),
@@ -67,6 +85,7 @@ export const useWorkoutStore = create<WorkoutState>()(
           ghostVolume: ghostVolume + (newEntries.reduce((s,e)=>s+e.totalVolume, 0) * 0.98),
           activeCardId: null, activeSetIndex: 0
         });
+        triggerAlert('success');
       },
 
       addExercise: (ex) => {
@@ -86,8 +105,9 @@ export const useWorkoutStore = create<WorkoutState>()(
         const card = session.cards.find(c => c.id === cid);
         const setData = card?.sets.find(s => s.id === sid);
         if (!card || !setData) return;
+        const setVol = setData.weight * setData.reps;
         const newMuscleVol = { ...muscleVolume };
-        card.exercise.primaryMuscles.forEach(m => { newMuscleVol[m] = (newMuscleVol[m] || 0) + (setData.weight * setData.reps); });
+        card.exercise.primaryMuscles.forEach(m => { newMuscleVol[m] = (newMuscleVol[m] || 0) + setVol; });
         set({
           session: { ...session, cards: session.cards.map(c => c.id !== cid ? c : { ...c, sets: c.sets.map(s => s.id === sid ? { ...s, completed: true, timestamp: Date.now() } : s) }) },
           muscleHeat: addHeatFromExercise(muscleHeat, card.exercise, 1),
@@ -103,11 +123,13 @@ export const useWorkoutStore = create<WorkoutState>()(
       updateMealNotes: (m) => set({ mealNotes: m }),
       updateSchedule: (date, type) => set({ schedule: { ...get().schedule, [date]: type } }),
       updateDateNote: (date, note) => set({ scheduleNotes: { ...get().scheduleNotes, [date]: note } }),
+      
       toggleDailyExercise: (day, id) => {
         const current = get().dailyProtocols[day] || [];
         const next = current.includes(id) ? current.filter(x => x !== id) : [...current, id];
         set({ dailyProtocols: { ...get().dailyProtocols, [day]: next } });
       },
+
       connectWatch: async () => {
         try {
           const device = await (navigator as any).bluetooth.requestDevice({ filters: [{ services: ['heart_rate'] }] });
