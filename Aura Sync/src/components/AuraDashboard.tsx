@@ -1,85 +1,68 @@
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Timer, Watch, ShieldCheck, Cpu, Dumbbell as DbIcon } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Activity, Flame, Zap, Timer, Edit2, ShieldCheck, Watch } from 'lucide-react';
 import { useWorkoutStore } from '../store/useWorkoutStore';
-import { workoutRegistry } from '../data/workoutRegistry';
+import BlackBoxTerminal from './BlackBoxTerminal';
 
 export default function AuraDashboard() {
-  const { watchConnected, connectWatch, session, userName, userAge, userWeight, sessionLimit, setSessionLimit, endSession, startSession, dailyProtocols, toggleDailyExercise } = useWorkoutStore();
-  const [activeDay, setActiveDay] = useState('monday');
-  const [activeTab, setActiveTab] = useState<'machine' | 'free'>('machine');
+  const { history, watchConnected, connectWatch, evolutionXP, nutrition, userName, userAge, userWeight, setUserStats } = useWorkoutStore();
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
 
-  const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-
-  const handleStartSession = () => {
-    const dayOfWeek = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-    const ids = dailyProtocols[dayOfWeek] || [];
-    const exercises = workoutRegistry.filter(ex => ids.includes(ex.id));
-    startSession(exercises);
-  };
+  const today = new Date().setHours(0, 0, 0, 0);
+  const totalCals = nutrition.filter(n => n.timestamp >= today).reduce((s, n) => s + n.calories, 0);
+  const totalProtein = nutrition.filter(n => n.timestamp >= today).reduce((s, n) => s + n.protein, 0);
+  const weeklyVol = history.filter(h => h.date > (Date.now() - 604800000)).reduce((s, h) => s + h.totalVolume, 0);
 
   return (
     <div className="min-h-screen bg-[#050505] pb-24 p-4 pt-12 overflow-x-hidden">
-      <div className="flex justify-between items-start mb-8">
-        <div>
-          <h1 className="text-xl font-black tracking-widest text-white uppercase">{userName}</h1>
-          <p className="text-[10px] text-white/40 font-mono tracking-tighter">BIO_DATA: {userAge}Y // {userWeight}LBS</p>
+      <div className="flex justify-between items-start mb-10">
+        <div onClick={() => setIsEditingProfile(true)} className="cursor-pointer">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-2 h-2 bg-cobalt animate-pulse" />
+            <h1 className="text-lg font-black tracking-widest text-white/90 uppercase">{userName}</h1>
+          </div>
+          <p className="text-[9px] text-white/30 uppercase tracking-[0.2em] font-mono">BIO_LINK: {userAge}Y // {userWeight}LBS</p>
         </div>
-        {session && <div className="px-2 py-1 bg-cobalt text-black text-[9px] font-black animate-pulse">LINK_LIVE</div>}
-      </div>
-
-      <div className="glass p-5 mb-6">
-        <div className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] mb-4">Daily Matrix Config</div>
-        <div className="flex gap-1 overflow-x-auto no-scrollbar mb-6">
-          {days.map(d => (
-            <button key={d} onClick={() => setActiveDay(d)} className={`px-3 py-2 text-[8px] font-black uppercase border transition-all ${activeDay === d ? 'bg-cobalt text-black border-cobalt' : 'bg-white/5 border-white/10 text-white/40'}`}>
-              {d.slice(0,3)}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex gap-4 mb-4 border-b border-white/5 pb-2">
-          <button onClick={() => setActiveTab('machine')} className={`text-[10px] font-black uppercase flex items-center gap-2 ${activeTab === 'machine' ? 'text-cobalt' : 'text-white/20'}`}><Cpu size={12}/> Machines</button>
-          <button onClick={() => setActiveTab('free')} className={`text-[10px] font-black uppercase flex items-center gap-2 ${activeTab === 'free' ? 'text-white' : 'text-white/20'}`}><DbIcon size={12}/> Free Weights</button>
-        </div>
-
-        <div className="grid grid-cols-1 gap-2 max-h-64 overflow-y-auto no-scrollbar pr-2">
-          {workoutRegistry
-            .filter(ex => (activeTab === 'machine' ? ex.isMachine : !ex.isMachine))
-            .map(ex => {
-              const isSelected = dailyProtocols[activeDay]?.includes(ex.id);
-              return (
-                <button 
-                  key={ex.id} 
-                  onClick={() => toggleDailyExercise(activeDay, ex.id)}
-                  className={`flex justify-between items-center p-3 border-r-2 transition-all ${isSelected ? 'bg-cobalt/10 border-cobalt' : 'bg-white/[0.02] border-white/10'}`}
-                >
-                  <span className={`text-[10px] font-bold uppercase ${isSelected ? 'text-white' : 'text-white/40'}`}>{ex.name}</span>
-                  {isSelected && <ShieldCheck size={12} className="text-cobalt" />}
-                </button>
-              );
-            })}
+        <div className="text-right">
+          <div className="text-[9px] text-white/20 uppercase font-mono tracking-widest">RANK_XP</div>
+          <div className="text-2xl font-black text-cobalt italic">{evolutionXP}</div>
         </div>
       </div>
 
-      <div className="glass p-5 border-l-2 border-cobalt mb-6">
-         <div className="flex justify-between items-center mb-6">
-            <div className="flex items-center gap-2 text-[10px] font-black text-white/40 uppercase tracking-widest"><Timer size={14}/> Session Control</div>
-            <div className="text-[10px] font-mono text-white/40 font-bold">{(sessionLimit/3600).toFixed(1)} HRS</div>
-         </div>
-         {!session ? (
-           <div className="space-y-6">
-              <input type="range" min="300" max="36000" step="300" value={sessionLimit} onChange={(e) => setSessionLimit(Number(e.target.value))} className="w-full accent-cobalt" />
-              <button onClick={handleStartSession} className="w-full py-5 bg-cobalt text-black font-black uppercase text-xs tracking-[0.4em] shadow-[0_0_20px_#2563eb40] active:scale-95 transition-all">Synchronize Daily Link</button>
-           </div>
-         ) : (
-           <button onClick={endSession} className="w-full py-5 bg-red-500/20 text-red-500 border border-red-500/40 font-black uppercase text-xs tracking-widest active:scale-95 transition-all">Terminate Link</button>
-         )}
+      <div className="px-4 mb-4 grid grid-cols-4 gap-2">
+        <HudStat icon={Activity} label="Logs" value={history.length} color="#3b82f6" />
+        <HudStat icon={Flame} label="Weekly" value={`${(weeklyVol/1000).toFixed(1)}k`} color="#f97316" />
+        <HudStat icon={Zap} label="Cals" value={totalCals} color="#00ff88" />
+        <HudStat icon={Zap} label="Protein" value={`${totalProtein}g`} color="#e535ab" />
       </div>
 
-      {!watchConnected && (
-         <button onClick={connectWatch} className="w-full py-4 border border-dashed border-white/10 text-white/20 text-[9px] font-black uppercase tracking-widest">Authorize External Heart Rate Sensor</button>
-      )}
+      <div className="px-4 mb-10 mt-10"><BlackBoxTerminal /></div>
+
+      <AnimatePresence>
+        {isEditingProfile && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] bg-black/95 p-8 flex flex-col justify-center items-center">
+             <div className="w-full max-w-xs space-y-6">
+                <h2 className="text-2xl font-black italic uppercase text-white mb-8 border-l-4 border-cobalt pl-4">Update Identity</h2>
+                <div className="space-y-4">
+                   <div className="block"><span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Name</span><input className="w-full bg-white/5 p-4 border border-white/10 text-white outline-none" value={userName} onChange={(e)=>setUserName(e.target.value)}/></div>
+                   <div className="block"><span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Age</span><input type="number" className="w-full bg-white/5 p-4 border border-white/10 text-white outline-none" value={userAge} onChange={(e)=>setUserStats(Number(e.target.value), userWeight)}/></div>
+                   <div className="block"><span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Weight (Lbs)</span><input type="number" className="w-full bg-white/5 p-4 border border-white/10 text-white outline-none" value={userWeight} onChange={(e)=>setUserStats(userAge, Number(e.target.value))}/></div>
+                </div>
+                <button onClick={()=>setIsEditingProfile(false)} className="w-full py-4 bg-cobalt text-black font-black uppercase mt-8 tracking-widest">Authorize Changes</button>
+             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function HudStat({ icon: Icon, label, value, color }: any) {
+  return (
+    <div className="glass p-3 text-center border-t border-white/5">
+      <Icon className="w-3.5 h-3.5 mx-auto mb-1.5 opacity-40" style={{ color }} />
+      <div className="text-sm font-black italic tracking-tighter" style={{ color }}>{value}</div>
+      <div className="text-[8px] text-white/20 uppercase font-bold">{label}</div>
     </div>
   );
 }
