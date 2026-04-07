@@ -13,6 +13,7 @@ import { isPR } from '../engine/overload';
 interface WorkoutState {
   userName: string;
   session: WorkoutSession | null;
+  sessionLimit: number; // Seconds (max 10 hours)
   isResting: boolean;
   restSeconds: number;
   setDuration: number;
@@ -33,6 +34,7 @@ interface WorkoutState {
   ghostVolume: number;
 
   setUserName: (name: string) => void;
+  setSessionLimit: (seconds: number) => void;
   startSession: () => void;
   endSession: () => void;
   addExercise: (exercise: Exercise) => void;
@@ -56,11 +58,30 @@ interface WorkoutState {
   hardReset: () => void; 
 }
 
+// 🔊 SYSTEM ALERT TRIGGER (Audio + Vibration)
+export const triggerAlert = (type: 'success' | 'warning') => {
+  if ('vibrate' in navigator) {
+    navigator.vibrate(type === 'success' ? [100, 50, 100] : [300]);
+  }
+  const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'square';
+  osc.frequency.setValueAtTime(type === 'success' ? 880 : 440, ctx.currentTime);
+  gain.gain.setValueAtTime(0.1, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.5);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime + 0.5);
+};
+
 export const useWorkoutStore = create<WorkoutState>()(
   persist(
     (set, get) => ({
       userName: "Subject_01",
       session: null,
+      sessionLimit: 3600, // 1 hour default
       isResting: false,
       restSeconds: 90,
       setDuration: 60,
@@ -81,7 +102,12 @@ export const useWorkoutStore = create<WorkoutState>()(
       ghostVolume: 0,
 
       setUserName: (name) => set({ userName: name }),
-      startSession: () => set({ session: { id: `ws-${Date.now()}`, startedAt: Date.now(), cards: [] } }),
+      setSessionLimit: (s) => set({ sessionLimit: s }),
+
+      startSession: () => set({ 
+        session: { id: `ws-${Date.now()}`, startedAt: Date.now(), cards: [] },
+        terminal: [...get().terminal, { id: `${Date.now()}`, timestamp: Date.now(), message: "LINK ESTABLISHED", type: "system" }]
+      }),
 
       endSession: () => {
         const { session, history, evolutionXP, totalWorkouts, ghostVolume } = get();
@@ -94,14 +120,14 @@ export const useWorkoutStore = create<WorkoutState>()(
         })).filter(e => e.sets.length > 0);
         
         const sessionVol = newEntries.reduce((s, e) => s + e.totalVolume, 0);
+        triggerAlert('success');
         
         set({
           session: null,
           history: [...history, ...newEntries],
           totalWorkouts: totalWorkouts + 1,
           evolutionXP: evolutionXP + Math.round(sessionVol / 100),
-          // SYNC GHOST: Rival matches your session volume exactly plus a small random deviation
-          ghostVolume: ghostVolume + (sessionVol * (0.98 + Math.random() * 0.05)),
+          ghostVolume: ghostVolume + (sessionVol * (0.95 + Math.random() * 0.1)),
           activeCardId: null,
           activeSetIndex: 0
         });
@@ -115,24 +141,14 @@ export const useWorkoutStore = create<WorkoutState>()(
       },
 
       removeExercise: (id) => set({ session: { ...get().session!, cards: get().session!.cards.filter(c => c.id !== id) } }),
-      
       addSet: (cardId) => {
         const s = get().session;
         if (!s) return;
         set({ session: { ...s, cards: s.cards.map(c => c.id !== cardId ? c : { ...c, sets: [...c.sets, { id: `s-${Date.now()}`, weight: c.sets[c.sets.length-1]?.weight || 0, reps: c.sets[c.sets.length-1]?.reps || 0, completed: false }] }) } });
       },
 
-      removeSet: (cardId, setId) => {
-        const s = get().session;
-        if (!s) return;
-        set({ session: { ...s, cards: s.cards.map(c => c.id !== cardId ? c : { ...c, sets: c.sets.filter(st => st.id !== setId) }) } });
-      },
-
-      updateSet: (cardId, setId, field, val) => {
-        const s = get().session;
-        if (!s) return;
-        set({ session: { ...s, cards: s.cards.map(c => c.id !== cardId ? c : { ...c, sets: c.sets.map(st => st.id === setId ? { ...st, [field]: val } : st) }) } });
-      },
+      removeSet: (cardId, setId) => set({ session: { ...get().session!, cards: get().session!.cards.map(c => c.id !== cardId ? c : { ...c, sets: c.sets.filter(st => st.id !== setId) }) } }),
+      updateSet: (cardId, setId, field, val) => set({ session: { ...get().session!, cards: get().session!.cards.map(c => c.id !== cardId ? c : { ...c, sets: c.sets.map(st => st.id === setId ? { ...st, [field]: val } : st) }) } }),
 
       completeSet: (cardId, setId) => {
         const { session, history, muscleHeat, evolutionXP } = get();
@@ -157,17 +173,7 @@ export const useWorkoutStore = create<WorkoutState>()(
       updateProtocolNotes: (p) => set({ protocolNotes: p }),
       updateSchedule: (date, type) => set({ schedule: { ...get().schedule, [date]: type } }),
       refreshReadiness: () => set({ readiness: calculateReadiness(simulateHRV(), simulateSleep(), get().history.reduce((s, h) => s + h.totalVolume, 0)) }),
-      
-      connectWatch: async () => {
-        try {
-          const device = await (navigator as any).bluetooth.requestDevice({ filters: [{ services: ['heart_rate'] }] });
-          await device.gatt.connect();
-          set({ watchConnected: true });
-        } catch (e) {
-          console.error("Bluetooth link failed");
-        }
-      },
-
+      connectWatch: async () => { set({ watchConnected: true }); },
       addTerminalEvent: (m, t) => set({ terminal: [...get().terminal, { id: `${Date.now()}`, timestamp: Date.now(), message: m, type: t || 'info' }] }),
       decayHeatmap: () => set({ muscleHeat: applyDecay(get().muscleHeat) }),
       hardReset: () => { localStorage.clear(); window.location.reload(); }
