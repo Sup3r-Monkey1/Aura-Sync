@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Activity, Brain, Flame, Zap, TrendingUp, Timer } from 'lucide-react';
+import { Activity, Brain, Flame, Zap, TrendingUp, Timer, Lock, Watch, ChevronRight } from 'lucide-react';
 import { useWorkoutStore } from '../store/useWorkoutStore';
 import { getZoneColor, getZoneLabel } from '../engine/readiness';
 import { getHeatColor, muscleName, getTopFatigued, getOverallFatigue } from '../engine/heatmap';
@@ -10,241 +10,193 @@ import BlackBoxTerminal from './BlackBoxTerminal';
 
 export default function AuraDashboard() {
   const {
-    readiness, muscleHeat, history, totalWorkouts,
-    evolutionXP, nutrition, refreshReadiness, decayHeatmap, startSession, session,
+    readiness, muscleHeat, history, totalWorkouts, watchConnected, connectWatch,
+    evolutionXP, nutrition, refreshReadiness, decayHeatmap, startSession, session, hardReset
   } = useWorkoutStore();
 
-  // Refresh readiness and decay heatmap on mount
   useEffect(() => {
     refreshReadiness();
     decayHeatmap();
   }, [refreshReadiness, decayHeatmap]);
 
   const zoneColor = getZoneColor(readiness.zone);
-  const topFatigued = getTopFatigued(muscleHeat, 6);
+  const topFatigued = getTopFatigued(muscleHeat, 4);
   const overallFatigue = getOverallFatigue(muscleHeat);
 
-  // Today's nutrition
+  // Stats derived from REAL logged data
   const today = new Date().setHours(0, 0, 0, 0);
   const todayNutrition = nutrition.filter(n => n.timestamp >= today);
   const totalCals = todayNutrition.reduce((s, n) => s + n.calories, 0);
   const totalProtein = todayNutrition.reduce((s, n) => s + n.protein, 0);
+  const weeklyVol = history.filter(h => h.date > (Date.now() - 604800000)).reduce((s, h) => s + h.totalVolume, 0);
 
-  // Weekly volume
-  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-  const weeklyVol = history.filter(h => h.date > weekAgo).reduce((s, h) => s + h.totalVolume, 0);
-
-  // Overload suggestions for recently trained exercises
-  const recentExerciseIds = [...new Set(history.slice(-10).map(h => h.exerciseId))].slice(0, 3);
-  const suggestions = recentExerciseIds.map(id => {
-    const ex = workoutRegistry.find(e => e.id === id);
-    return { suggestion: calculateOverload(id, history), exercise: ex };
-  }).filter(s => s.exercise && s.suggestion.lastBest);
+  // Progressive Overload Suggestions (Only if you have history)
+  const recentExerciseIds = [...new Set(history.slice(-5).map(h => h.exerciseId))];
+  const suggestions = recentExerciseIds.map(id => ({
+    suggestion: calculateOverload(id, history),
+    exercise: workoutRegistry.find(e => e.id === id)
+  })).filter(s => s.exercise && s.suggestion.lastBest);
 
   return (
     <div className="min-h-screen bg-[#050505] pb-24">
-      {/* Header */}
-      <div className="px-4 pt-12 pb-6">
-        <div className="flex items-center gap-3 mb-1">
-          <Zap className="w-5 h-5" style={{ color: zoneColor }} />
-          <h1 className="text-lg font-bold tracking-wide">AURA SYNC</h1>
+      {/* Header HUD */}
+      <div className="px-4 pt-12 pb-6 flex justify-between items-end">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-2 h-2 bg-cobalt animate-pulse" />
+            <h1 className="text-lg font-black tracking-widest text-white/90">AURA SYNC</h1>
+          </div>
+          <p className="text-[10px] text-white/30 uppercase tracking-[0.2em]">Bio-Verification Active</p>
         </div>
-        <p className="text-[11px] text-white/40 uppercase tracking-[0.15em]">
-          Elite Fitness Ecosystem
-        </p>
+        <div className="text-right">
+          <div className="text-[10px] text-white/20 uppercase font-mono">Evolution_XP</div>
+          <div className="text-xl font-black text-glow-cobalt text-cobalt-bright italic">{evolutionXP}</div>
+        </div>
       </div>
 
-      {/* Neural Readiness Gauge */}
-      <div className="px-4 mb-4">
-        <motion.div
-          className="glass p-5"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          style={{ boxShadow: `0 0 30px ${zoneColor}20` }}
-        >
-          <div className="flex items-center gap-2 mb-4">
-            <Brain className="w-4 h-4" style={{ color: zoneColor }} />
-            <span className="text-xs uppercase tracking-widest text-white/50">Neural Latency</span>
-          </div>
-
-          {/* Score circle */}
-          <div className="flex items-center gap-6">
-            <div className="relative w-24 h-24 shrink-0">
-              <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
-                <circle cx="50" cy="50" r="42" fill="none" stroke="#ffffff08" strokeWidth="6" />
-                <motion.circle
-                  cx="50" cy="50" r="42" fill="none"
-                  stroke={zoneColor}
-                  strokeWidth="6"
-                  strokeLinecap="butt"
-                  strokeDasharray={`${2 * Math.PI * 42}`}
-                  initial={{ strokeDashoffset: 2 * Math.PI * 42 }}
-                  animate={{ strokeDashoffset: 2 * Math.PI * 42 * (1 - readiness.score / 100) }}
-                  transition={{ duration: 1.5, ease: 'easeOut' }}
-                />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-2xl font-black" style={{ color: zoneColor }}>
-                  {readiness.score}
-                </span>
-                <span className="text-[9px] text-white/30">%</span>
+      {/* 🛡️ NEURAL LATENCY (Locked until Watch Connected) */}
+      <div className="px-4 mb-6">
+        {watchConnected ? (
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }} 
+            animate={{ opacity: 1, y: 0 }}
+            className="glass p-5 border-l-2" 
+            style={{ borderColor: zoneColor, boxShadow: `0 0 30px ${zoneColor}15` }}
+          >
+            <div className="flex justify-between items-start mb-4">
+              <div className="flex items-center gap-2">
+                <Brain className="w-4 h-4" style={{ color: zoneColor }} />
+                <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Neural Readiness</span>
               </div>
+              <span className="text-[9px] font-mono py-0.5 px-2 bg-white/5" style={{ color: zoneColor }}>{readiness.zone}</span>
             </div>
-
-            <div className="flex-1 space-y-2">
-              <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: zoneColor }}>
-                {readiness.zone}
-              </div>
-              <p className="text-[11px] text-white/40 leading-relaxed">
-                {getZoneLabel(readiness.zone)}
-              </p>
-              <div className="flex gap-4 text-[10px] text-white/30">
-                <span>HRV: {readiness.hrv}ms</span>
-                <span>Sleep: {readiness.sleepHours}h</span>
-              </div>
+            <div className="flex items-center gap-8">
+               <div className="text-4xl font-black italic tracking-tighter" style={{ color: zoneColor }}>
+                 {readiness.score}<span className="text-xs not-italic opacity-40">%</span>
+               </div>
+               <div className="flex-1 space-y-1">
+                  <p className="text-[11px] text-white/60 leading-tight">{getZoneLabel(readiness.zone)}</p>
+                  <div className="flex gap-4 text-[9px] font-mono text-white/20">
+                    <span>HRV: {readiness.hrv}ms</span>
+                    <span>SLEEP: {readiness.sleepHours}h</span>
+                  </div>
+               </div>
             </div>
+          </motion.div>
+        ) : (
+          <div className="glass p-8 text-center border-dashed border-white/10 bg-white/[0.01]">
+            <Lock className="w-6 h-6 mx-auto mb-3 text-white/10" />
+            <h3 className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] mb-4">Neural Data Locked</h3>
+            <button 
+              onClick={connectWatch}
+              className="px-8 py-3 bg-cobalt text-black text-[11px] font-black uppercase tracking-widest glow-cobalt active:scale-95 transition-all"
+            >
+              Link Wearable
+            </button>
           </div>
-        </motion.div>
+        )}
       </div>
 
-      {/* Quick Stats Row */}
+      {/* 📊 QUICK STATS (Dynamic starting at 0) */}
       <div className="px-4 mb-4 grid grid-cols-4 gap-2">
-        {[
-          { icon: Activity, label: 'Sessions', value: totalWorkouts, color: '#3b82f6' },
-          { icon: Flame, label: 'Weekly Vol', value: `${(weeklyVol / 1000).toFixed(1)}k`, color: '#f97316' },
-          { icon: TrendingUp, label: 'Calories', value: totalCals, color: '#00ff88' },
-          { icon: Zap, label: 'Protein', value: `${totalProtein}g`, color: '#e535ab' },
-        ].map(stat => (
-          <div key={stat.label} className="glass p-3 text-center">
-            <stat.icon className="w-4 h-4 mx-auto mb-1" style={{ color: stat.color }} />
-            <div className="text-sm font-bold" style={{ color: stat.color }}>{stat.value}</div>
-            <div className="text-[9px] text-white/30 uppercase">{stat.label}</div>
-          </div>
-        ))}
+        <HudStat icon={Activity} label="Workouts" value={totalWorkouts} color="#3b82f6" />
+        <HudStat icon={Flame} label="Weekly Vol" value={`${(weeklyVol/1000).toFixed(1)}k`} color="#f97316" />
+        <HudStat icon={TrendingUp} label="Calories" value={totalCals} color="#00ff88" />
+        <HudStat icon={Zap} label="Protein" value={`${totalProtein}g`} color="#e535ab" />
       </div>
 
-      {/* Muscle Heatmap */}
+      {/* 🔥 MUSCLE HEATMAP (Conditional Clean Slate) */}
       <div className="px-4 mb-4">
-        <div className="glass p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Flame className="w-4 h-4 text-orange-500" />
-              <span className="text-xs uppercase tracking-widest text-white/50">Muscle Fatigue</span>
+        <div className="glass p-5">
+          <div className="flex justify-between items-center mb-6">
+            <span className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Bio-Verification Heatmap</span>
+            <span className="text-[10px] font-mono text-white/20">{overallFatigue}% System Stress</span>
+          </div>
+          
+          {overallFatigue === 0 ? (
+            <div className="py-10 text-center">
+              <div className="text-[10px] text-white/10 uppercase tracking-[0.3em] italic">System Cold: Awaiting Session Log</div>
             </div>
-            <span className="text-[10px] text-white/30">Overall: {overallFatigue}%</span>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            {topFatigued.map(mh => (
-              <div key={mh.group} className="flex items-center gap-2">
-                <div className="flex-1">
-                  <div className="flex justify-between text-[10px] mb-1">
-                    <span className="text-white/50">{muscleName(mh.group)}</span>
-                    <span style={{ color: getHeatColor(mh.heat) }}>
-                      {Math.round(mh.heat)}%
-                    </span>
-                  </div>
-                  <div className="h-1.5 bg-white/5 overflow-hidden">
-                    <motion.div
-                      className="h-full"
-                      style={{ backgroundColor: getHeatColor(mh.heat) }}
-                      initial={{ width: 0 }}
-                      animate={{ width: `${mh.heat}%` }}
-                      transition={{ duration: 0.8 }}
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+               {topFatigued.map(mh => (
+                 <div key={mh.group}>
+                   <div className="flex justify-between text-[9px] uppercase tracking-tighter mb-1.5">
+                     <span className="text-white/40">{muscleName(mh.group)}</span>
+                     <span style={{ color: getHeatColor(mh.heat) }}>{Math.round(mh.heat)}%</span>
+                   </div>
+                   <div className="h-1 bg-white/5 overflow-hidden">
+                     <motion.div 
+                        initial={{ width: 0 }} animate={{ width: `${mh.heat}%` }}
+                        className="h-full" style={{ backgroundColor: getHeatColor(mh.heat) }} 
+                      />
+                   </div>
+                 </div>
+               ))}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Overload Suggestions */}
+      {/* 📈 OVERLOAD INTEL */}
       {suggestions.length > 0 && (
         <div className="px-4 mb-4">
-          <div className="glass p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <TrendingUp className="w-4 h-4 text-cobalt" />
-              <span className="text-xs uppercase tracking-widest text-white/50">Overload Intel</span>
-            </div>
-            <div className="space-y-2">
-              {suggestions.map(({ suggestion: s, exercise: ex }) => (
-                <div key={s.exerciseId} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
-                  <div>
-                    <div className="text-xs text-white/70">{ex!.name}</div>
-                    <div className="text-[10px] text-white/30">
-                      Last: {s.lastBest!.weight}×{s.lastBest!.reps}
-                    </div>
-                  </div>
+           <div className="glass p-4 border-l-2 border-magenta">
+              <div className="text-[10px] font-black text-magenta uppercase tracking-[0.2em] mb-3">Progressive Overload Intel</div>
+              {suggestions.slice(0, 2).map(({ suggestion: s, exercise: ex }) => (
+                <div key={ex?.id} className="flex justify-between items-center py-2 border-b border-white/5 last:border-0">
+                  <span className="text-xs text-white/60">{ex?.name}</span>
                   <div className="text-right">
-                    <div className="text-xs font-bold" style={{ color: s.delta > 0 ? '#e535ab' : s.delta < 0 ? '#f97316' : '#3b82f6' }}>
-                      {s.suggestedWeight} lbs × {s.suggestedReps}
-                    </div>
-                    <div className="text-[10px]" style={{ color: s.delta > 0 ? '#e535ab' : '#ffffff40' }}>
-                      {s.delta > 0 ? `+${s.delta}%` : s.delta < 0 ? `${s.delta}%` : 'maintain'}
-                    </div>
+                    <div className="text-xs font-bold text-magenta tracking-tighter">{s.suggestedWeight} lbs × {s.suggestedReps}</div>
+                    <div className="text-[9px] text-white/20 uppercase">Target Suggestion</div>
                   </div>
                 </div>
               ))}
-            </div>
-          </div>
+           </div>
         </div>
       )}
 
-      {/* Start Session Button */}
+      {/* ⚡ START SESSION */}
       {!session && (
-        <div className="px-4 mb-4">
+        <div className="px-4 mb-8">
           <motion.button
             whileTap={{ scale: 0.97 }}
             onClick={() => startSession()}
-            className="w-full py-4 bg-cobalt text-white font-bold text-sm uppercase tracking-widest glow-cobalt"
+            className="w-full py-5 bg-cobalt text-black font-black text-sm uppercase tracking-widest glow-cobalt"
           >
-            <div className="flex items-center justify-center gap-2">
-              <Timer className="w-5 h-5" />
-              Start Session
-            </div>
+            Initiate Ghost Protocol
           </motion.button>
         </div>
       )}
 
-      {/* Evolution XP */}
-      <div className="px-4 mb-4">
-        <div className="glass p-3">
-          <div className="flex items-center justify-between text-[10px] mb-1">
-            <span className="text-white/40 uppercase tracking-widest">Evolution XP</span>
-            <span className="text-cobalt-bright font-bold">{evolutionXP} XP</span>
-          </div>
-          <div className="h-1.5 bg-white/5 overflow-hidden">
-            <motion.div
-              className="h-full bg-gradient-to-r from-cobalt to-magenta"
-              animate={{ width: `${(evolutionXP % 1000) / 10}%` }}
-            />
-          </div>
-        </div>
-      </div>
+      <div className="px-4"><BlackBoxTerminal /></div>
 
-      {/* Black Box Terminal — pinned at bottom of dashboard */}
-      <div className="px-4">
-        <BlackBoxTerminal />
-      </div>
-{/* SYSTEM RESET (DANGER ZONE) */}
-      <div className="px-4 mt-12 pb-12">
-        <div className="border border-red-900/20 bg-red-900/5 p-4">
-          <h4 className="text-[10px] font-black tracking-widest text-red-500/50 uppercase mb-3">
-            System Maintenance
-          </h4>
+      {/* ☢️ SYSTEM RESET (Monday Morning Wipe) */}
+      <div className="px-4 mt-20 pb-12">
+        <div className="border border-red-900/20 bg-red-900/5 p-4 text-center">
+          <p className="text-[9px] text-red-500/30 uppercase tracking-widest mb-3 italic">Warning: Data persistence irreversible</p>
           <button
             onClick={() => {
-              if (window.confirm("⚠️ WARNING: This will permanently wipe your Aura XP, History, and Stats. Proceed?")) {
-                useWorkoutStore.getState().hardReset();
+              if (window.confirm("⚠️ SYSTEM WIPE: This will reset all Aura XP and History to 0. Proceed?")) {
+                hardReset();
               }
             }}
-            className="text-[9px] font-bold text-red-500/40 hover:text-red-500 uppercase tracking-tighter transition-colors"
+            className="text-[10px] font-black text-red-500/40 hover:text-red-500 uppercase tracking-tighter transition-colors"
           >
-            Execute Hard Reset / Wipe Local Storage
+            Execute Hard Reset / Clear Local Storage
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function HudStat({ icon: Icon, label, value, color }: any) {
+  return (
+    <div className="glass p-3 text-center border-t border-white/5">
+      <Icon className="w-3.5 h-3.5 mx-auto mb-1.5 opacity-40" style={{ color }} />
+      <div className="text-sm font-black italic tracking-tighter" style={{ color }}>{value}</div>
+      <div className="text-[8px] text-white/20 uppercase tracking-tighter font-bold">{label}</div>
     </div>
   );
 }
