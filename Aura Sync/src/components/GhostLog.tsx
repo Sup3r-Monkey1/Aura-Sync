@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Check, Clock, Trash2, Power, RotateCcw, Cpu, Dumbbell as DbIcon, ShieldCheck, Edit3, Utensils, Zap } from 'lucide-react';
+import { X, Check, Clock, Trash2, Power, RotateCcw, Cpu, Dumbbell as DbIcon, ShieldCheck, Edit3, Utensils, Zap, Activity } from 'lucide-react';
 import { useWorkoutStore, triggerAlert } from '../store/useWorkoutStore';
 import { workoutRegistry } from '../data/workoutRegistry';
 
@@ -44,13 +44,13 @@ export default function GhostLog() {
   };
 
   if (!session) return (
-    <div className="min-h-screen bg-[#050505] p-4 pt-12 pb-32 overflow-y-auto no-scrollbar">
+    <div className="min-h-screen bg-[#050505] p-4 pt-10 pb-32 overflow-y-auto no-scrollbar">
       <h2 className="text-xl font-black italic text-white uppercase mb-6 px-2 tracking-tighter">Sovereign_Protocol</h2>
       
-      <div className="glass-strong p-5 mb-6 border-t border-white/10 rounded-2xl">
+      <div className="glass-strong p-4 mb-6 border-t border-white/10 rounded-2xl">
         <div className="flex gap-1 overflow-x-auto no-scrollbar mb-6">
           {days.map(d => (
-            <button key={d} onClick={() => setActiveDay(d)} className={`px-4 py-2 shrink-0 text-[10px] font-black uppercase border transition-all ${activeDay === d ? 'bg-cobalt text-black border-cobalt shadow-[0_0_10px_#2563eb]' : 'bg-white/5 border-white/10 text-white/30'}`}>
+            <button key={d} onClick={() => setActiveDay(d)} className={`px-4 py-2 shrink-0 text-[10px] font-black uppercase border transition-all ${activeDay === d ? 'bg-cobalt text-black border-cobalt' : 'bg-white/5 border-white/10 text-white/30'}`}>
               {d.slice(0,3)}
             </button>
           ))}
@@ -72,7 +72,7 @@ export default function GhostLog() {
             .map(ex => {
               const isSelected = dailyProtocols[activeDay]?.includes(ex.id);
               return (
-                <button key={ex.id} onClick={() => toggleDailyExercise(activeDay, ex.id)} className={`flex justify-between items-center p-4 border-l-2 ${isSelected ? 'bg-cobalt/10 border-cobalt' : 'bg-white/[0.01] border-white/5'}`}>
+                <button key={ex.id} onClick={() => toggleDailyExercise(activeDay, ex.id)} className={`flex justify-between items-center p-3.5 border-l-2 transition-all ${isSelected ? 'bg-cobalt/10 border-cobalt' : 'bg-white/[0.01] border-white/5'}`}>
                   <span className={`text-[10px] font-bold uppercase text-left ${isSelected ? 'text-white' : 'text-white/30'}`}>{ex.name}</span>
                   {isSelected && <ShieldCheck size={14} className="text-cobalt" />}
                 </button>
@@ -83,8 +83,8 @@ export default function GhostLog() {
       </div>
 
       <div className="grid gap-4">
-         <div className="glass p-5 border-l-2 border-magenta"><div className="text-[9px] font-black text-magenta uppercase mb-3"><Edit3 size={12} className="inline mr-2"/> Directives</div><p className="text-[11px] text-white/50 font-mono italic bg-black/20 p-4 border border-white/5">{scheduleNotes[today] || "No mission protocol for today."}</p></div>
-         <div className="glass p-5 border-l-2 border-terminal"><div className="text-[9px] font-black text-terminal uppercase mb-3"><Utensils size={12} className="inline mr-2"/> Intake</div><textarea value={mealNotes} onChange={(e)=>updateMealNotes(e.target.value)} className="w-full h-24 bg-transparent text-[11px] text-white/60 outline-none resize-none font-mono" placeholder="Input nutritional script..."/></div>
+         <div className="glass p-4 border-l-2 border-magenta"><div className="text-[9px] font-black text-magenta uppercase mb-3"><Edit3 size={12} className="inline mr-2"/> Directives</div><p className="text-[11px] text-white/50 font-mono italic bg-black/20 p-4 border border-white/5">{scheduleNotes[today] || "No mission protocol for today."}</p></div>
+         <div className="glass p-4 border-l-2 border-terminal"><div className="text-[9px] font-black text-terminal uppercase mb-3"><Utensils size={12} className="inline mr-2"/> Intake</div><textarea value={mealNotes} onChange={(e)=>updateMealNotes(e.target.value)} className="w-full h-24 bg-transparent text-[11px] text-white/60 outline-none resize-none font-mono" placeholder="Input nutritional script..."/></div>
       </div>
     </div>
   );
