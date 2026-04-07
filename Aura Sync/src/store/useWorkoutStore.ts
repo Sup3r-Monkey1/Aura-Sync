@@ -5,17 +5,14 @@ import { createEmptyHeatmap, addHeatFromExercise, applyDecay } from '../engine/h
 import { calculateReadiness, simulateHRV, simulateSleep } from '../engine/readiness';
 import { isPR } from '../engine/overload';
 
-// 🔊 EXPORTED TRIGGER
 export const triggerAlert = (type: 'success' | 'warning') => {
   try {
     if ('vibrate' in navigator) navigator.vibrate(type === 'success' ? [100, 50, 100] : [300]);
     const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(type === 'success' ? 880 : 440, ctx.currentTime);
-    gain.gain.setValueAtTime(0.1, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.5);
+    osc.type = 'sine'; osc.frequency.setValueAtTime(type === 'success' ? 880 : 440, ctx.currentTime);
+    gain.gain.setValueAtTime(0.1, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.5);
     osc.connect(gain); gain.connect(ctx.destination);
     osc.start(); osc.stop(ctx.currentTime + 0.5);
   } catch (e) {}
@@ -35,7 +32,7 @@ interface WorkoutState {
   activeSetIndex: number;
   history: SessionHistory[];
   muscleHeat: MuscleHeat[];
-  muscleVolume: Record<string, number>; // NEW: Cumulative volume per muscle
+  muscleVolume: Record<string, number>;
   nutrition: NutritionEntry[];
   readiness: ReadinessScore;
   terminal: TerminalEvent[];
@@ -43,16 +40,17 @@ interface WorkoutState {
   watchConnected: boolean;
   schedule: Record<string, 'gym' | 'home' | 'rest'>;
   scheduleNotes: Record<string, string>;
+  dailyProtocols: Record<string, string[]>; // day -> exerciseIds
   ghostVolume: number;
 
-  setUserName: (name: string) => void;
-  setUserStats: (age: number, weight: number) => void;
+  setUserName: (n: string) => void;
+  setUserStats: (a: number, w: number) => void;
   setSessionLimit: (s: number) => void;
   startSession: () => void;
   endSession: () => void;
   addExercise: (ex: Exercise) => void;
   removeExercise: (id: string) => void;
-  addSet: (id: string) => void;
+  addSet: (cid: string) => void;
   removeSet: (cid: string, sid: string) => void;
   updateSet: (cid: string, sid: string, f: 'weight'|'reps', v: number) => void;
   completeSet: (cid: string, sid: string) => void;
@@ -63,6 +61,7 @@ interface WorkoutState {
   addNutrition: (n: any) => void;
   updateSchedule: (d: string, t: any) => void;
   updateDateNote: (d: string, n: string) => void;
+  toggleDailyExercise: (day: string, id: string) => void;
   connectWatch: () => Promise<void>;
   decayHeatmap: () => void;
   refreshReadiness: () => void;
@@ -72,40 +71,42 @@ interface WorkoutState {
 export const useWorkoutStore = create<WorkoutState>()(
   persist(
     (set, get) => ({
-      userName: "Subject_01",
-      userAge: 25,
-      userWeight: 185,
-      session: null,
-      sessionLimit: 3600,
-      isResting: false,
-      restSeconds: 90,
-      setDuration: 60,
-      restDuration: 90,
-      activeCardId: null,
-      activeSetIndex: 0,
-      history: [],
-      muscleHeat: createEmptyHeatmap(),
-      muscleVolume: {}, 
-      nutrition: [],
-      readiness: calculateReadiness(simulateHRV(), simulateSleep(), 0),
-      terminal: [],
-      evolutionXP: 0,
-      watchConnected: false,
-      schedule: {},
-      scheduleNotes: {},
-      ghostVolume: 0,
+      userName: "Subject_01", userAge: 25, userWeight: 185,
+      session: null, sessionLimit: 3600, isResting: false,
+      restSeconds: 90, setDuration: 60, restDuration: 90,
+      activeCardId: null, activeSetIndex: 0,
+      history: [], muscleHeat: createEmptyHeatmap(), muscleVolume: {},
+      nutrition: [], readiness: calculateReadiness(simulateHRV(), simulateSleep(), 0),
+      terminal: [], evolutionXP: 0, watchConnected: false,
+      schedule: {}, scheduleNotes: {}, dailyProtocols: {}, ghostVolume: 0,
 
       setUserName: (userName) => set({ userName }),
       setUserStats: (userAge, userWeight) => set({ userAge, userWeight }),
       setSessionLimit: (sessionLimit) => set({ sessionLimit }),
-      startSession: () => set({ session: { id: `ws-${Date.now()}`, startedAt: Date.now(), cards: [] } }),
-      
+
+      startSession: () => {
+        const today = new Date().toISOString().split('T')[0];
+        const dayOfWeek = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+        const protocolIds = get().dailyProtocols[dayOfWeek] || [];
+        const { workoutRegistry } = require('../data/workoutRegistry');
+        
+        const initialCards: ExerciseCard[] = protocolIds.map(id => {
+          const ex = workoutRegistry.find((e:any) => e.id === id);
+          return {
+            id: `c-${Date.now()}-${id}`,
+            exercise: ex,
+            sets: [1,2,3].map(i => ({ id: `s-${Date.now()}-${id}-${i}`, weight: ex.defaultWeight, reps: ex.defaultReps, completed: false }))
+          };
+        });
+
+        set({ session: { id: `ws-${Date.now()}`, startedAt: Date.now(), cards: initialCards } });
+      },
+
       endSession: () => {
         const { session, history, evolutionXP, ghostVolume } = get();
         if (!session) return;
         const newEntries = session.cards.map(c => ({
-          exerciseId: c.exercise.id,
-          date: Date.now(),
+          exerciseId: c.exercise.id, date: Date.now(),
           sets: c.sets.filter(s => s.completed).map(s => ({ weight: s.weight, reps: s.reps })),
           totalVolume: c.sets.filter(s => s.completed).reduce((sum, s) => sum + s.weight * s.reps, 0)
         })).filter(e => e.sets.length > 0);
@@ -120,8 +121,7 @@ export const useWorkoutStore = create<WorkoutState>()(
       },
 
       addExercise: (ex) => {
-        const s = get().session;
-        if (!s) return;
+        const s = get().session; if (!s) return;
         const sets = [1,2,3].map(i => ({ id: `s-${Date.now()}-${i}`, weight: ex.defaultWeight, reps: ex.defaultReps, completed: false }));
         set({ session: { ...s, cards: [...s.cards, { id: `c-${Date.now()}`, exercise: ex, sets }] } });
       },
@@ -137,18 +137,13 @@ export const useWorkoutStore = create<WorkoutState>()(
         const card = session.cards.find(c => c.id === cid);
         const setData = card?.sets.find(s => s.id === sid);
         if (!card || !setData) return;
-        
         const setVol = setData.weight * setData.reps;
         const newMuscleVol = { ...muscleVolume };
-        card.exercise.primaryMuscles.forEach(m => {
-          newMuscleVol[m] = (newMuscleVol[m] || 0) + setVol;
-        });
-
+        card.exercise.primaryMuscles.forEach(m => { newMuscleVol[m] = (newMuscleVol[m] || 0) + setVol; });
         set({
           session: { ...session, cards: session.cards.map(c => c.id !== cid ? c : { ...c, sets: c.sets.map(s => s.id === sid ? { ...s, completed: true, timestamp: Date.now() } : s) }) },
           muscleHeat: addHeatFromExercise(muscleHeat, card.exercise, 1),
-          muscleVolume: newMuscleVol,
-          evolutionXP: evolutionXP + 10
+          muscleVolume: newMuscleVol, evolutionXP: evolutionXP + 10
         });
       },
 
@@ -159,11 +154,17 @@ export const useWorkoutStore = create<WorkoutState>()(
       addNutrition: (n) => set({ nutrition: [...get().nutrition, { ...n, id: `n-${Date.now()}`, timestamp: Date.now() }], evolutionXP: get().evolutionXP + 5 }),
       updateSchedule: (date, type) => set({ schedule: { ...get().schedule, [date]: type } }),
       updateDateNote: (date, note) => set({ scheduleNotes: { ...get().scheduleNotes, [date]: note } }),
+      
+      toggleDailyExercise: (day, id) => {
+        const current = get().dailyProtocols[day] || [];
+        const next = current.includes(id) ? current.filter(x => x !== id) : [...current, id];
+        set({ dailyProtocols: { ...get().dailyProtocols, [day]: next } });
+      },
+
       connectWatch: async () => {
         try {
           const device = await (navigator as any).bluetooth.requestDevice({ filters: [{ services: ['heart_rate'] }] });
-          await device.gatt.connect();
-          set({ watchConnected: true });
+          await device.gatt.connect(); set({ watchConnected: true });
         } catch (e) {}
       },
       decayHeatmap: () => set({ muscleHeat: applyDecay(get().muscleHeat) }),
