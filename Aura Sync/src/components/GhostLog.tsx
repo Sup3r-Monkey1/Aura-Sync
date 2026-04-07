@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Play, Square, Pause, X, Check, Clock, Trash2, Power } from 'lucide-react';
+import { Plus, X, Check, Clock, Trash2, Power, RotateCcw } from 'lucide-react';
 import { useWorkoutStore, triggerAlert } from '../store/useWorkoutStore';
 import { workoutRegistry } from '../data/workoutRegistry';
 import { hapticSetComplete, hapticTap, hapticRestDone } from '../services/haptics';
@@ -37,23 +37,29 @@ export default function GhostLog() {
       }
     }
     return () => clearInterval(interval);
-  }, [timeLeft, isPaused, timerState, session, activeCardId, activeSetIndex]);
+  }, [timeLeft, isPaused, timerState, session, activeCardId, activeSetIndex, completeSet, setDuration, restDuration, setTracking]);
 
   const startChain = (cardId: string, index: number) => {
     setTracking(cardId, index); setTimerState('SET'); setTimeLeft(setDuration); setIsPaused(false); hapticTap();
   };
 
-  if (!session) return <div className="h-screen flex items-center justify-center bg-[#050505] text-white/10 font-black italic tracking-widest animate-pulse uppercase">Awaiting_Sync_Link</div>;
+  if (!session) return (
+    <div className="h-screen flex items-center justify-center bg-[#050505]">
+      <div className="text-center">
+        <RotateCcw className="w-12 h-12 text-white/10 mx-auto mb-4 animate-spin-slow" />
+        <p className="text-[10px] text-white/20 font-black uppercase tracking-[0.5em]">Awaiting_Link</p>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-[#050505] pb-32">
-      {/* 🛡️ IMMUTABLE TIMER HUD (Z-100) */}
       <div className={`sticky top-0 z-[100] p-6 border-b border-white/5 transition-colors duration-700 backdrop-blur-xl ${
         timerState === 'SET' ? 'bg-cobalt/40' : timerState === 'REST' ? 'bg-magenta/40' : 'bg-black/90'
       }`}>
         <div className="flex justify-between items-center mb-6">
           <button onClick={() => setShowTimerAdjust(true)} className="flex items-center gap-2 text-[10px] font-black uppercase text-white/60"><Clock size={14} className="text-cobalt" /> Config</button>
-          <button onClick={endSession} className="flex items-center gap-2 px-4 py-1.5 bg-red-500 text-black text-[10px] font-black uppercase tracking-tighter italic shadow-[0_0_15px_rgba(239,68,68,0.4)]"><Power size={12}/> End Session</button>
+          <button onClick={endSession} className="flex items-center gap-2 px-4 py-1.5 bg-red-500 text-black text-[10px] font-black uppercase tracking-tighter italic"><Power size={12}/> End Session</button>
         </div>
         <div className="flex flex-col items-center">
           <div className="text-[9px] font-black tracking-[0.5em] uppercase text-white/40 mb-1">{timerState === 'IDLE' ? 'Link Standby' : timerState}</div>
@@ -87,7 +93,7 @@ export default function GhostLog() {
                     <div className="flex items-center gap-3">
                       {!set.completed ? (
                         <>
-                          <button onClick={() => isActive && timerState === 'SET' ? setTimeLeft(0) : startChain(card.id, idx)} className={`px-5 py-2.5 text-[10px] font-black uppercase tracking-widest ${isActive && timerState === 'SET' ? 'bg-terminal text-black animate-pulse' : 'bg-cobalt text-white'}`}>{isActive && timerState === 'SET' ? 'Lifting' : 'Start'}</button>
+                          <button onClick={() => isActive && timerState === 'SET' ? setTimeLeft(0) : startChain(card.id, idx)} className={`px-5 py-2.5 text-[10px] font-black uppercase tracking-widest ${isActive && timerState === 'SET' ? 'bg-terminal text-black' : 'bg-cobalt text-white'}`}>{isActive && timerState === 'SET' ? 'Lifting' : 'Start'}</button>
                           <button onClick={() => removeSet(card.id, set.id)} className="p-2 text-white/10"><Trash2 size={16}/></button>
                         </>
                       ) : <Check size={24} className="text-terminal" />}
@@ -102,6 +108,22 @@ export default function GhostLog() {
       </div>
 
       <button onClick={() => setShowAdd(true)} className="fixed bottom-24 right-6 h-16 w-16 bg-cobalt text-black flex items-center justify-center glow-cobalt z-[110] shadow-2xl"><Plus size={28}/></button>
+
+      <AnimatePresence>
+        {showAdd && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[120] bg-black/98 p-6 overflow-y-auto">
+             <div className="flex justify-between items-center mb-10"><h2 className="text-2xl font-black italic uppercase text-white">Sync Protocols</h2><button onClick={() => setShowAdd(false)} className="p-3 bg-white/5 text-white"><X/></button></div>
+             <div className="grid gap-2">
+                {workoutRegistry.map(ex => (
+                  <button key={ex.id} onClick={() => { addExercise(ex); setShowAdd(false); hapticTap(); }} className="glass p-5 text-left border-white/5 hover:border-cobalt/40 transition-colors">
+                    <div className="text-[9px] text-cobalt font-mono uppercase mb-1">{ex.category}</div>
+                    <div className="font-bold text-lg uppercase tracking-tight text-white/80">{ex.name}</div>
+                  </button>
+                ))}
+             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
