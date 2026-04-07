@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Play, Square, Pause, X, Check, Award } from 'lucide-react';
+import { Plus, Play, Square, Pause, X, Check, Clock } from 'lucide-react';
 import { useWorkoutStore } from '../store/useWorkoutStore';
 import { workoutRegistry } from '../data/workoutRegistry';
 import { hapticSetComplete, hapticTap, hapticRestDone } from '../services/haptics';
@@ -12,42 +12,25 @@ export default function GhostLog() {
   const [timeLeft, setTimeLeft] = useState(0);
   const [isPaused, setIsPaused] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
+  const [showTimerAdjust, setShowTimerAdjust] = useState(false);
 
-  // ⛓️ MASTER AUTO-CHAIN EFFECT
   useEffect(() => {
     let interval: any;
     if (!isPaused && timeLeft > 0) {
       interval = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
     } else if (timeLeft === 0 && !isPaused) {
       if (timerState === 'SET') {
-        // 1. FINISH LIFTING -> START REST
         const currentCard = session?.cards.find(c => c.id === activeCardId);
         const currentSet = currentCard?.sets[activeSetIndex];
-        
-        if (currentCard && currentSet) {
-          completeSet(activeCardId!, currentSet.id);
-          hapticSetComplete();
-        }
-
-        setTimerState('REST');
-        setTimeLeft(restDuration);
+        if (currentCard && currentSet) { completeSet(activeCardId!, currentSet.id); hapticSetComplete(); }
+        setTimerState('REST'); setTimeLeft(restDuration);
       } else if (timerState === 'REST') {
-        // 2. FINISH RESTING -> CHECK FOR NEXT SET
         const currentCard = session?.cards.find(c => c.id === activeCardId);
         const nextIndex = activeSetIndex + 1;
-
         if (currentCard && nextIndex < currentCard.sets.length) {
-          // AUTO-CHAIN TO NEXT SET IN SAME CARD
-          setTracking(activeCardId!, nextIndex);
-          setTimerState('SET');
-          setTimeLeft(setDuration);
-          hapticRestDone();
+          setTracking(activeCardId!, nextIndex); setTimerState('SET'); setTimeLeft(setDuration); hapticRestDone();
         } else {
-          // NO MORE SETS IN THIS EXERCISE
-          setTimerState('IDLE');
-          setIsPaused(true);
-          setTracking(null, 0);
-          hapticRestDone();
+          setTimerState('IDLE'); setIsPaused(true); setTracking(null, 0); hapticRestDone();
         }
       }
     }
@@ -55,37 +38,21 @@ export default function GhostLog() {
   }, [timeLeft, isPaused, timerState, session, activeCardId, activeSetIndex]);
 
   const startChain = (cardId: string, index: number) => {
-    setTracking(cardId, index);
-    setTimerState('SET');
-    setTimeLeft(setDuration);
-    setIsPaused(false);
-    hapticTap();
-  };
-
-  const manualStop = (cardId: string, index: number) => {
-    const card = session?.cards.find(c => c.id === cardId);
-    if (card) {
-      completeSet(cardId, card.sets[index].id);
-      setTimerState('REST');
-      setTimeLeft(restDuration);
-      setIsPaused(false);
-      hapticSetComplete();
-    }
+    setTracking(cardId, index); setTimerState('SET'); setTimeLeft(setDuration); setIsPaused(false); hapticTap();
   };
 
   if (!session) return <div className="h-screen flex items-center justify-center bg-[#050505] text-white/20 font-black italic">AWAITING LINK...</div>;
 
   return (
     <div className="min-h-screen bg-[#050505] pb-32">
-      {/* MASSIVE HUD TIMER */}
+      {/* HUD TIMER */}
       <div className={`sticky top-0 z-50 p-6 border-b border-white/5 transition-colors duration-700 ${
         timerState === 'SET' ? 'bg-cobalt/20' : timerState === 'REST' ? 'bg-magenta/20' : 'bg-black'
       }`}>
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex gap-4">
-            <TimerField label="Set" value={setDuration} onChange={(v) => setDurations(v, restDuration)} color="cobalt" />
-            <TimerField label="Rest" value={restDuration} onChange={(v) => setDurations(setDuration, v)} color="magenta" />
-          </div>
+        <div className="flex justify-between items-center mb-6 px-2">
+          <button onClick={() => setShowTimerAdjust(true)} className="flex items-center gap-2 text-[10px] font-black uppercase text-white/40 hover:text-white transition-colors">
+            <Clock size={14} className="text-cobalt" /> Adjust Intervals
+          </button>
           <button onClick={endSession} className="text-[10px] font-black text-hazard border border-hazard/30 px-3 py-1 uppercase tracking-tighter">Terminate</button>
         </div>
 
@@ -113,14 +80,12 @@ export default function GhostLog() {
               </div>
               <button onClick={() => removeExercise(card.id)} className="text-white/10 p-2"><X size={16}/></button>
             </div>
-
             <div className="space-y-2">
               {card.sets.map((set, idx) => {
                 const isActive = activeCardId === card.id && activeSetIndex === idx;
                 return (
                   <div key={set.id} className={`glass p-3 border-l-2 flex items-center justify-between transition-all ${
-                    set.completed ? 'border-terminal opacity-30' : 
-                    isActive ? 'border-cobalt glow-cobalt bg-cobalt/5' : 'border-white/10'
+                    set.completed ? 'border-terminal opacity-30' : isActive ? 'border-cobalt glow-cobalt bg-cobalt/5' : 'border-white/10'
                   }`}>
                     <div className="flex gap-4 items-center">
                       <span className={`text-[10px] font-mono ${isActive ? 'text-cobalt' : 'text-white/20'}`}>0{idx+1}</span>
@@ -130,23 +95,10 @@ export default function GhostLog() {
                         <input type="number" value={set.reps} onChange={(e) => updateSet(card.id, set.id, 'reps', parseInt(e.target.value))} className="w-10 bg-transparent text-lg font-black text-white outline-none" />
                       </div>
                     </div>
-
-                    <div className="flex items-center gap-2">
-                      {!set.completed && (
-                        <button 
-                          onClick={() => isActive && timerState === 'SET' ? manualStop(card.id, idx) : startChain(card.id, idx)}
-                          className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest ${
-                            isActive && timerState === 'SET' ? 'bg-terminal text-black' : 'bg-cobalt text-white'
-                          }`}
-                        >
-                          {isActive && timerState === 'SET' ? 'Log' : 'Start'}
-                        </button>
-                      )}
-                      {set.completed && <Check size={20} className="text-terminal" />}
-                      {!set.completed && !isActive && (
-                         <button onClick={() => removeSet(card.id, set.id)} className="p-2 text-white/10"><X size={12}/></button>
-                      )}
-                    </div>
+                    {!set.completed && (
+                      <button onClick={() => startChain(card.id, idx)} className="px-4 py-2 bg-cobalt text-black text-[10px] font-black uppercase tracking-widest">{isActive && timerState === 'SET' ? 'Lifting' : 'Start'}</button>
+                    )}
+                    {set.completed && <Check size={20} className="text-terminal" />}
                   </div>
                 );
               })}
@@ -158,7 +110,19 @@ export default function GhostLog() {
 
       <button onClick={() => setShowAdd(true)} className="fixed bottom-24 right-6 h-14 w-14 bg-cobalt text-black flex items-center justify-center glow-cobalt z-40 shadow-2xl"><Plus /></button>
 
+      {/* 🕒 DIGITAL SCROLL TIMER MODAL */}
       <AnimatePresence>
+        {showTimerAdjust && (
+          <motion.div initial={{ opacity: 0, y: 100 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 100 }} className="fixed inset-0 z-[70] bg-black/98 p-8 flex flex-col justify-center">
+             <h2 className="text-2xl font-black italic uppercase text-white mb-10 text-center">Interval Adjust</h2>
+             <div className="space-y-12">
+               <ScrollSelector label="Set Lifting Window" value={setDuration} onChange={(v) => setDurations(v, restDuration)} />
+               <ScrollSelector label="Rest Recovery Window" value={restDuration} onChange={(v) => setDurations(setDuration, v)} />
+             </div>
+             <button onClick={() => setShowTimerAdjust(false)} className="mt-16 w-full py-5 bg-white text-black font-black uppercase tracking-widest">Update Protocol</button>
+          </motion.div>
+        )}
+
         {showAdd && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] bg-black/98 p-6 overflow-y-auto">
              <div className="flex justify-between items-center mb-10"><h2 className="text-2xl font-black italic uppercase text-white">Sync Protocols</h2><button onClick={() => setShowAdd(false)} className="p-3 bg-white/5 text-white"><X/></button></div>
@@ -177,11 +141,25 @@ export default function GhostLog() {
   );
 }
 
-function TimerField({ label, value, onChange, color }: any) {
+function ScrollSelector({ label, value, onChange }: any) {
+  const mins = Math.floor(value / 60);
+  const secs = value % 60;
   return (
-    <div>
-      <span className={`text-[8px] uppercase font-black block mb-1 text-${color}`}>{label} (S)</span>
-      <input type="number" value={value} onChange={(e) => onChange(Number(e.target.value))} className={`w-12 bg-transparent text-sm font-black text-white border-b border-${color}/30 outline-none`} />
+    <div className="flex flex-col items-center">
+      <span className="text-[10px] font-black uppercase text-white/30 mb-4 tracking-[0.2em]">{label}</span>
+      <div className="flex items-center gap-6">
+        <div className="flex flex-col items-center">
+          <button onClick={() => onChange(Math.max(0, value - 60))} className="p-3 text-white/20 hover:text-cobalt"><Plus size={16} className="rotate-45"/></button>
+          <div className="text-5xl font-black text-white font-mono">{mins}m</div>
+          <button onClick={() => onChange(value + 60)} className="p-3 text-white/20 hover:text-cobalt"><Plus size={16}/></button>
+        </div>
+        <div className="text-4xl font-black text-white/10">:</div>
+        <div className="flex flex-col items-center">
+          <button onClick={() => onChange(Math.max(0, value - 5))} className="p-3 text-white/20 hover:text-cobalt"><Plus size={16} className="rotate-45"/></button>
+          <div className="text-5xl font-black text-white font-mono">{String(secs).padStart(2, '0')}s</div>
+          <button onClick={() => onChange(value + 5)} className="p-3 text-white/20 hover:text-cobalt"><Plus size={16}/></button>
+        </div>
+      </div>
     </div>
   );
 }
