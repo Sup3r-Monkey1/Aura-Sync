@@ -2,67 +2,77 @@
 
 @theme {
   --color-obsidian: #050505;
-  --color-obsidian-light: #0a0a0f;
-  --color-cobalt: #2563eb;
-  --color-cobalt-bright: #3b82f6;
-  --color-cobalt-dim: #1e40af;
-  --color-magenta: #e535ab;
-  --color-violet: #7c3aed;
-  --color-hazard: #f97316;
+  --color-cobalt: #00D1FF;
+  --color-cobalt-deep: #0077FF;
+  --color-magenta: #FF00FF;
+  --color-magenta-deep: #BD00FF;
   --color-terminal: #00ff88;
 }
 
 * {
   -webkit-tap-highlight-color: transparent;
-  border-radius: 0px !important; /* Forces the sharp HUD look */
+  border-radius: 0px !important;
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Inter', -apple-system, sans-serif;
   background: #050505;
   color: white;
   overflow-x: hidden;
   overscroll-behavior-y: none;
 }
 
-.no-scrollbar::-webkit-scrollbar { display: none; }
-.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
-.glass {
-  background: rgba(10, 10, 15, 0.8);
-  backdrop-filter: blur(40px);
-  -webkit-backdrop-filter: blur(40px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+/* 🧊 GLASSMORPHISM UTILITIES */
+.aura-card {
+  @apply bg-white/[0.03] backdrop-blur-xl border border-white/10 shadow-[0_0_30px_rgba(0,0,0,0.5)];
 }
 
-.glass-strong {
-  background: rgba(10, 10, 15, 0.95);
-  backdrop-filter: blur(48px);
-  -webkit-backdrop-filter: blur(48px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+.aura-card-strong {
+  @apply bg-black/80 backdrop-blur-2xl border border-white/10;
 }
 
-.glow-cobalt {
-  box-shadow: 0 0 20px rgba(37, 99, 235, 0.4), 0 0 60px rgba(37, 99, 235, 0.1);
+/* ✨ NEON GLOWS */
+.aura-text-glow {
+  text-shadow: 0 0 10px rgba(0, 209, 255, 0.8), 0 0 20px rgba(0, 209, 255, 0.4);
 }
 
-.text-glow-cobalt {
-  text-shadow: 0 0 15px rgba(37, 99, 235, 0.6);
+.aura-text-glow-magenta {
+  text-shadow: 0 0 10px rgba(255, 0, 255, 0.8), 0 0 20px rgba(255, 0, 255, 0.4);
 }
 
-.text-glow-magenta {
-  text-shadow: 0 0 12px rgba(229, 53, 171, 0.6);
+/* 🎢 GRADIENTS */
+.aura-gradient-blue {
+  background: linear-gradient(90deg, #00D1FF 0%, #0077FF 100%);
 }
 
-.blur-text {
-  filter: blur(10px);
-  opacity: 0.2;
-  user-select: none;
+.aura-gradient-pink {
+  background: linear-gradient(90deg, #FF00FF 0%, #BD00FF 100%);
 }
 
-@keyframes pulse-cobalt {
-  0%, 100% { box-shadow: 0 0 15px rgba(37, 99, 235, 0.2); }
-  50% { box-shadow: 0 0 35px rgba(37, 99, 235, 0.5); }
+/* 📸 APERTURE BUTTON */
+.aura-button-aperture {
+  background: linear-gradient(180deg, #00D1FF 0%, #0077FF 100%);
+  @apply shadow-[0_0_20px_rgba(0,209,255,0.4)] active:scale-95 transition-all;
+}
+
+/* 🏎️ ANIMATIONS */
+@keyframes energy-pulse {
+  0% { opacity: 0.3; transform: translateX(-100%); }
+  50% { opacity: 1; }
+  100% { opacity: 0.3; transform: translateX(100%); }
+}
+
+.animate-energy {
+  position: relative;
+  overflow: hidden;
+}
+
+.animate-energy::after {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  animation: energy-pulse 2s infinite linear;
 }
 
 @keyframes scan-line {
@@ -70,18 +80,4 @@ body {
   100% { top: 100%; }
 }
 
-@keyframes terminal-blink {
-  0%, 50% { opacity: 1; }
-  51%, 100% { opacity: 0; }
-}
-
-.animate-pulse-cobalt { animation: pulse-cobalt 2s ease-in-out infinite; }
 .animate-scan { animation: scan-line 2.5s linear infinite; }
-.animate-blink { animation: terminal-blink 1s step-end infinite; }
-
-input[type="number"]::-webkit-inner-spin-button,
-input[type="number"]::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-input[type="number"] { -moz-appearance: textfield; }
