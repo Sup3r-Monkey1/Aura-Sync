@@ -19,40 +19,43 @@ export default function EvolutionRank() {
   };
 
   const getMGlow = (m: string) => {
-    if (!session) return "none";
+    if (!session) return "0px 0px 5px rgba(255,255,255,0.05)";
     const h = muscleHeat.find(x => x.group === m)?.heat || 0;
-    return h > 45 ? `drop-shadow(0 0 ${h/6}px ${getMColor(m)})` : "none";
+    return `0 0 ${h/4}px ${getMColor(m)}`;
   };
 
   return (
     <div className="min-h-screen bg-[#050505] p-4 pt-10 pb-24 overflow-x-hidden">
-      <h2 className="text-sm font-black uppercase tracking-[0.4em] text-white/70 italic px-2">Evolution_Anatomy</h2>
-      <p className="text-[9px] text-white/30 mt-1 px-2 uppercase font-mono tracking-widest font-black">CORE_XP: <span className="text-cobalt">{evolutionXP}</span></p>
-
-      <div className="glass-strong p-8 mt-6 mb-6 flex flex-col items-center relative overflow-hidden border-t border-white/10 rounded-3xl">
-        <div className="relative w-56 h-80 flex justify-center">
-           <svg viewBox="0 0 200 400" className="w-full h-full drop-shadow-[0_0_2px_rgba(255,255,255,0.05)]">
-              <path d="M90 45 Q100 28 110 45 Q110 65 100 72 Q90 65 90 45 Z" fill={getMColor('core')} />
-              <path d="M70 85 Q100 78 130 85 L125 155 Q100 168 75 155 Z" fill={getMColor('chest')} style={{ filter: getMGlow('chest') }} />
-              <rect x="88" y="152" width="24" height="35" fill={getMColor('core')} rx="2" className="opacity-80" />
-              <path d="M70 88 L55 135 Q70 145 75 135 Z" fill={getMColor('back')} />
-              <path d="M130 88 L145 135 Q130 145 125 135 Z" fill={getMColor('back')} />
-              <path d="M55 90 Q40 92 40 175 L55 175 Z" fill={getMColor('biceps')} style={{ filter: getMGlow('biceps') }} />
-              <path d="M145 90 Q160 92 160 175 L145 175 Z" fill={getMColor('biceps')} style={{ filter: getMGlow('biceps') }} />
-              <path d="M75 165 Q65 240 70 365 L95 365 L100 165 Z" fill={getMColor('quads')} style={{ filter: getMGlow('quads') }} />
-              <path d="M125 165 Q135 240 130 365 L105 365 L100 165 Z" fill={getMColor('quads')} style={{ filter: getMGlow('quads') }} />
+      <h2 className="text-sm font-black uppercase tracking-[0.5em] text-white/60 italic px-2">Evolution_Model</h2>
+      
+      <div className="aura-card-strong p-8 mt-6 mb-8 flex flex-col items-center relative overflow-hidden rounded-[2rem] border-t border-white/20">
+        {/* HOLOGRAPHIC SCANNER LINES */}
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:20px_20px] opacity-20" />
+        
+        <div className="relative w-64 h-96 flex justify-center z-10">
+           <svg viewBox="0 0 200 400" className="w-full h-full filter drop-shadow-[0_0_10px_rgba(0,0,0,0.5)]">
+              {/* 3D CONTOURED ANATOMY PATHS */}
+              <path d="M88 40 Q100 22 112 40 Q112 65 100 72 Q88 65 88 40 Z" fill={getMColor('core')} stroke="white" strokeWidth="0.5" opacity="0.5" />
+              <path d="M65 80 Q100 72 135 80 L130 160 Q100 175 70 160 Z" fill={getMColor('chest')} style={{ filter: `drop-shadow(${getMGlow('chest')})` }} className="transition-all duration-1000" stroke="white" strokeWidth="0.2" />
+              <path d="M50 82 Q35 85 35 180 L50 180 Z" fill={getMColor('biceps')} style={{ filter: `drop-shadow(${getMGlow('biceps')})` }} stroke="white" strokeWidth="0.2" />
+              <path d="M150 82 Q165 85 165 180 L150 180 Z" fill={getMColor('biceps')} style={{ filter: `drop-shadow(${getMGlow('biceps')})` }} stroke="white" strokeWidth="0.2" />
+              <path d="M70 170 Q55 250 60 380 L90 380 L95 170 Z" fill={getMColor('quads')} style={{ filter: `drop-shadow(${getMGlow('quads')})` }} stroke="white" strokeWidth="0.2" />
+              <path d="M130 170 Q145 250 140 380 L110 380 L105 170 Z" fill={getMColor('quads')} style={{ filter: `drop-shadow(${getMGlow('quads')})` }} stroke="white" strokeWidth="0.2" />
            </svg>
+           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-cobalt/5 to-transparent h-1/2 w-full animate-scan pointer-events-none" />
         </div>
-        <div className="w-full mt-6 grid grid-cols-5 gap-1 border-t border-white/5 pt-4 font-mono">
-           {TIERS.map(t => (<div key={t.label} className="flex flex-col items-center"><div className="h-1 w-full rounded-full" style={{ backgroundColor: t.color }} /><span className="text-[5px] font-black text-white/30 mt-1">{t.label}</span></div>))}
+
+        <div className="w-full mt-10 grid grid-cols-5 gap-1 pt-6 border-t border-white/5">
+           {TIERS.map(t => (<div key={t.label} className="flex flex-col items-center"><div className="h-1 w-full rounded-full" style={{ backgroundColor: t.color, boxShadow: `0 0 10px ${t.color}40` }} /><span className="text-[6px] font-black text-white/30 mt-1 font-mono tracking-tighter">{t.label}</span></div>))}
         </div>
       </div>
 
       <div className="grid grid-cols-3 gap-2 mb-8 font-mono">
-         <div className="glass p-4 text-center rounded-xl"><Heart size={14} className={watchConnected ? "text-red-500 animate-pulse" : "text-white/5"} /><div className="text-lg font-black mt-2 text-white">{watchConnected ? "64bpm" : "--"}</div><div className="text-[7px] text-white/20 uppercase font-bold tracking-widest mt-1">Bio_Sync</div></div>
-         <div className="glass p-4 text-center border-b border-cobalt/40 rounded-xl"><Activity size={14} className="text-cobalt" /><div className="text-lg font-black mt-2 text-white">{history.length}</div><div className="text-[7px] text-white/20 uppercase font-bold tracking-widest mt-1">Logs</div></div>
-         <div className="glass p-4 text-center rounded-xl"><ShieldCheck size={14} className="text-terminal" /><div className="text-lg font-black mt-2 text-white">{Math.min(100, history.length*5)}%</div><div className="text-[7px] text-white/20 uppercase font-bold tracking-widest mt-1">Status</div></div>
+         <div className="aura-card p-4 text-center rounded-2xl"><Heart size={16} className={watchConnected ? "text-red-500 animate-pulse" : "text-white/5"} /><div className="text-xl font-black mt-2 text-white aura-text-glow">{watchConnected ? "64" : "--"}</div><div className="text-[7px] text-white/20 uppercase font-black tracking-[0.2em] mt-1">HRV_Live</div></div>
+         <div className="aura-card p-4 text-center rounded-2xl border-b-2 border-cobalt"><Activity size={16} className="text-cobalt" /><div className="text-xl font-black mt-2 text-white aura-text-glow">{history.length}</div><div className="text-[7px] text-white/20 uppercase font-black tracking-[0.2em] mt-1">Uploads</div></div>
+         <div className="aura-card p-4 text-center rounded-2xl"><ShieldCheck size={16} className="text-terminal" /><div className="text-xl font-black mt-2 text-white aura-text-glow">{Math.min(100, history.length*4)}%</div><div className="text-[7px] text-white/20 uppercase font-black tracking-[0.2em] mt-1">Verified</div></div>
       </div>
+      {!watchConnected && <button onClick={connectWatch} className="w-full py-5 aura-card border-dashed border-white/20 text-white/40 font-black uppercase text-[10px] tracking-[0.5em] active:bg-cobalt active:text-black transition-all rounded-2xl">Establish Bio-Sync</button>}
     </div>
   );
 }
