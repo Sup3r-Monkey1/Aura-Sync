@@ -5,6 +5,7 @@ import { createEmptyHeatmap, addHeatFromExercise, applyDecay } from '../engine/h
 import { calculateReadiness, simulateHRV, simulateSleep } from '../engine/readiness';
 import { isPR } from '../engine/overload';
 
+// 🔊 NAMED EXPORT FOR BUILD STABILITY
 export const triggerAlert = (type: 'success' | 'warning') => {
   try {
     if ('vibrate' in navigator) navigator.vibrate(type === 'success' ? [100, 50, 100] : [300]);
@@ -74,10 +75,11 @@ export const useWorkoutStore = create<WorkoutState>()(
           sets: c.sets.filter(s => s.completed).map(s => ({ weight: s.weight, reps: s.reps })),
           totalVolume: c.sets.filter(s => s.completed).reduce((sum, s) => sum + s.weight * s.reps, 0)
         })).filter(e => e.sets.length > 0);
+        const sessionVol = newEntries.reduce((s,e)=>s+e.totalVolume, 0);
         set({
           session: null, history: [...history, ...newEntries],
-          evolutionXP: evolutionXP + Math.round(newEntries.reduce((s,e)=>s+e.totalVolume, 0) / 100),
-          ghostVolume: ghostVolume + (newEntries.reduce((s,e)=>s+e.totalVolume, 0) * 0.98),
+          evolutionXP: evolutionXP + Math.round(sessionVol / 100),
+          ghostVolume: ghostVolume + (sessionVol * 0.98),
           activeCardId: null, activeSetIndex: 0
         });
         triggerAlert('success');
@@ -124,16 +126,10 @@ export const useWorkoutStore = create<WorkoutState>()(
       },
       connectWatch: async () => {
         try {
-          const device = await (navigator as any).bluetooth.requestDevice({ 
-            filters: [{ services: ['heart_rate'] }],
-            optionalServices: ['battery_service']
-          });
-          await device.gatt.connect(); 
-          set({ watchConnected: true });
+          const device = await (navigator as any).bluetooth.requestDevice({ filters: [{ services: ['heart_rate'] }] });
+          await device.gatt.connect(); set({ watchConnected: true });
           device.addEventListener('gattserverdisconnected', () => set({ watchConnected: false }));
-        } catch (e) {
-          set({ watchConnected: false });
-        }
+        } catch (e) { set({ watchConnected: false }); }
       },
       decayHeatmap: () => set({ muscleHeat: applyDecay(get().muscleHeat) }),
       refreshReadiness: () => set({ readiness: calculateReadiness(simulateHRV(), simulateSleep(), 0) }),
