@@ -1,7 +1,7 @@
 import type { Exercise } from '../types';
 
 export interface ExtendedExercise extends Exercise {
-  isMachine: boolean;
+Hhjjjkgvvjhfh CSE gn bf rn v
   type: 'strength' | 'free-weight' | 'cardio' | 'functional';
 }
 
