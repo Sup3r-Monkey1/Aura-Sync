@@ -2,57 +2,64 @@ import type { Exercise } from '../types';
 
 export interface ExtendedExercise extends Exercise {
   isMachine: boolean;
-  type: 'strength' | 'free-weight' | 'cardio' | 'functional' | 'core';
+  type: 'strength' | 'free-weight' | 'cardio' | 'functional';
 }
 
 export const workoutRegistry: ExtendedExercise[] = [
-  // ─── STRENGTH & RESISTANCE MACHINES ───
-  { id: 'm1', name: 'Arm Curl Machine', category: 'biceps', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'isolation', primaryMuscles: ['biceps'], secondaryMuscles: [], defaultWeight: 50, defaultReps: 12, difficulty: 1 },
-  { id: 'm2', name: 'Arm Extension Machine', category: 'triceps', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'isolation', primaryMuscles: ['triceps'], secondaryMuscles: [], defaultWeight: 50, defaultReps: 12, difficulty: 1 },
-  { id: 'm3', name: 'Shoulder Press Machine', category: 'shoulders', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'compound', primaryMuscles: ['front_delts'], secondaryMuscles: ['triceps'], defaultWeight: 80, defaultReps: 10, difficulty: 1 },
-  { id: 'm4', name: 'Lateral Raise Machine', category: 'shoulders', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'isolation', primaryMuscles: ['side_delts'], secondaryMuscles: [], defaultWeight: 40, defaultReps: 15, difficulty: 1 },
-  { id: 'm5', name: 'Chest Press Machine', category: 'chest', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'compound', primaryMuscles: ['chest'], secondaryMuscles: ['triceps'], defaultWeight: 100, defaultReps: 10, difficulty: 1 },
-  { id: 'm6', name: 'Incline Chest Press Machine', category: 'chest', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'compound', primaryMuscles: ['chest'], secondaryMuscles: ['front_delts'], defaultWeight: 90, defaultReps: 10, difficulty: 2 },
-  { id: 'm7', name: 'Decline Chest Press Machine', category: 'chest', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'compound', primaryMuscles: ['chest'], secondaryMuscles: ['triceps'], defaultWeight: 110, defaultReps: 10, difficulty: 2 },
-  { id: 'm8', name: 'Chest Fly / Pec Deck', category: 'chest', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'isolation', primaryMuscles: ['chest'], secondaryMuscles: [], defaultWeight: 80, defaultReps: 12, difficulty: 1 },
-  { id: 'm9', name: 'Lat Pulldown Machine', category: 'back', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'compound', primaryMuscles: ['lats'], secondaryMuscles: ['biceps'], defaultWeight: 100, defaultReps: 10, difficulty: 1 },
-  { id: 'm10', name: 'Seated Row Machine', category: 'back', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'compound', primaryMuscles: ['upper_back'], secondaryMuscles: ['lats'], defaultWeight: 110, defaultReps: 10, difficulty: 1 },
-  { id: 'm11', name: 'T-Bar Row Machine', category: 'back', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'compound', primaryMuscles: ['upper_back'], defaultWeight: 90, defaultReps: 10, difficulty: 2 },
-  { id: 'm12', name: 'Ab Crunch Machine', category: 'core', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'isolation', primaryMuscles: ['core'], defaultWeight: 60, defaultReps: 20, difficulty: 1 },
-  { id: 'm13', name: 'Rotary Torso Machine', category: 'core', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'isolation', primaryMuscles: ['core'], defaultWeight: 50, defaultReps: 15, difficulty: 1 },
-  { id: 'm14', name: 'Leg Press Machine', category: 'legs', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'compound', primaryMuscles: ['quads', 'glutes'], defaultWeight: 200, defaultReps: 12, difficulty: 1 },
-  { id: 'm15', name: 'Leg Extension Machine', category: 'legs', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'isolation', primaryMuscles: ['quads'], defaultWeight: 80, defaultReps: 12, difficulty: 1 },
-  { id: 'm16', name: 'Seated Leg Curl Machine', category: 'legs', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'isolation', primaryMuscles: ['hamstrings'], defaultWeight: 70, defaultReps: 12, difficulty: 1 },
-  { id: 'm17', name: 'Lying Leg Curl Machine', category: 'legs', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'isolation', primaryMuscles: ['hamstrings'], defaultWeight: 60, defaultReps: 12, difficulty: 1 },
-  { id: 'm18', name: 'Hack Squat Machine', category: 'legs', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'compound', primaryMuscles: ['quads'], defaultWeight: 140, defaultReps: 10, difficulty: 2 },
-  { id: 'm19', name: 'Leg Abduction Machine', category: 'legs', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'isolation', primaryMuscles: ['glutes'], defaultWeight: 100, defaultReps: 15, difficulty: 1 },
-  { id: 'm20', name: 'Hip Thrust Machine', category: 'legs', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'isolation', primaryMuscles: ['glutes'], defaultWeight: 135, defaultReps: 10, difficulty: 2 },
-  { id: 'm21', name: 'Reverse Hyper Machine', category: 'legs', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'isolation', primaryMuscles: ['lower_back', 'glutes'], defaultWeight: 50, defaultReps: 15, difficulty: 2 },
-  { id: 'm22', name: 'Seated Calf Raise', category: 'legs', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'isolation', primaryMuscles: ['calves'], defaultWeight: 90, defaultReps: 15, difficulty: 1 },
-  { id: 'm23', name: 'Standing Calf Raise', category: 'legs', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'isolation', primaryMuscles: ['calves'], defaultWeight: 120, defaultReps: 15, difficulty: 1 },
-  { id: 'm24', name: 'Back Extension Machine', category: 'back', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'isolation', primaryMuscles: ['lower_back'], defaultWeight: 100, defaultReps: 12, difficulty: 1 },
-  { id: 'm25', name: 'Assisted Pull-Up Machine', category: 'back', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'compound', primaryMuscles: ['lats'], defaultWeight: 60, defaultReps: 8, difficulty: 1 },
-  { id: 'm26', name: 'Triceps Press Machine', category: 'triceps', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'compound', primaryMuscles: ['triceps'], defaultWeight: 80, defaultReps: 10, difficulty: 1 },
+  // ─── CARDIO (UNABRIDGED) ───
+  { id: 'c1', name: 'Treadmill (Motorized)', category: 'cardio', isMachine: true, type: 'cardio', equipment: 'machine', mechanics: 'compound', primaryMuscles: ['quads'], secondaryMuscles: ['calves'], defaultWeight: 0, defaultReps: 1, difficulty: 1 },
+  { id: 'c2', name: 'Incline Treadmill', category: 'cardio', isMachine: true, type: 'cardio', equipment: 'machine', mechanics: 'compound', primaryMuscles: ['glutes'], secondaryMuscles: ['calves'], defaultWeight: 0, defaultReps: 1, difficulty: 2 },
+  { id: 'c3', name: 'Curved Treadmill', category: 'cardio', isMachine: true, type: 'cardio', equipment: 'machine', mechanics: 'compound', primaryMuscles: ['hamstrings'], secondaryMuscles: ['quads'], defaultWeight: 0, defaultReps: 1, difficulty: 3 },
+  { id: 'c4', name: 'Manual Treadmill', category: 'cardio', isMachine: true, type: 'cardio', equipment: 'machine', mechanics: 'compound', primaryMuscles: ['quads'], defaultWeight: 0, defaultReps: 1, difficulty: 2 },
+  { id: 'c5', name: 'Elliptical Trainer', category: 'cardio', isMachine: true, type: 'cardio', equipment: 'machine', mechanics: 'compound', primaryMuscles: ['quads', 'glutes'], defaultWeight: 0, defaultReps: 1, difficulty: 1 },
+  { id: 'c6', name: 'Air Bike / Assault Bike', category: 'cardio', isMachine: true, type: 'cardio', equipment: 'machine', mechanics: 'compound', primaryMuscles: ['quads', 'shoulders'], defaultWeight: 0, defaultReps: 1, difficulty: 3 },
+  { id: 'c7', name: 'Rowing Machine (Air)', category: 'cardio', isMachine: true, type: 'cardio', equipment: 'machine', mechanics: 'compound', primaryMuscles: ['lats', 'upper_back'], defaultWeight: 0, defaultReps: 1, difficulty: 2 },
+  { id: 'c8', name: 'Stair Climber / Stepmill', category: 'cardio', isMachine: true, type: 'cardio', equipment: 'machine', mechanics: 'compound', primaryMuscles: ['glutes'], defaultWeight: 0, defaultReps: 1, difficulty: 3 },
+  { id: 'c9', name: 'Ski Erg', category: 'cardio', isMachine: true, type: 'cardio', equipment: 'machine', mechanics: 'compound', primaryMuscles: ['lats', 'triceps'], defaultWeight: 0, defaultReps: 1, difficulty: 2 },
+  { id: 'c10', name: 'Jacobs Ladder', category: 'cardio', isMachine: true, type: 'cardio', equipment: 'machine', mechanics: 'compound', primaryMuscles: ['quads', 'core'], defaultWeight: 0, defaultReps: 1, difficulty: 3 },
+  { id: 'c11', name: 'VersaClimber', category: 'cardio', isMachine: true, type: 'cardio', equipment: 'machine', mechanics: 'compound', primaryMuscles: ['shoulders', 'quads'], defaultWeight: 0, defaultReps: 1, difficulty: 3 },
 
-  // ─── FREE WEIGHTS & HARDWARE ───
-  { id: 'f1', name: 'Olympic Barbell', category: 'chest', isMachine: false, type: 'free-weight', equipment: 'barbell', mechanics: 'compound', primaryMuscles: ['chest'], defaultWeight: 45, defaultReps: 1, difficulty: 3 },
-  { id: 'f2', name: 'Dumbbells', category: 'shoulders', isMachine: false, type: 'free-weight', equipment: 'dumbbell', mechanics: 'compound', primaryMuscles: ['shoulders'], defaultWeight: 50, defaultReps: 1, difficulty: 2 },
-  { id: 'f3', name: 'Kettlebells', category: 'legs', isMachine: false, type: 'free-weight', equipment: 'kettlebell', mechanics: 'compound', primaryMuscles: ['glutes'], defaultWeight: 35, defaultReps: 1, difficulty: 2 },
-  { id: 'f4', name: 'Trap Bar / Hex Bar', category: 'back', isMachine: false, type: 'free-weight', equipment: 'barbell', mechanics: 'compound', primaryMuscles: ['lower_back'], defaultWeight: 135, defaultReps: 1, difficulty: 3 },
-  { id: 'f5', name: 'Medicine Ball', category: 'core', isMachine: false, type: 'free-weight', equipment: 'hardware', mechanics: 'isolation', primaryMuscles: ['core'], defaultWeight: 20, defaultReps: 1, difficulty: 1 },
-  { id: 'f6', name: 'Sandbag', category: 'back', isMachine: false, type: 'free-weight', equipment: 'hardware', mechanics: 'compound', primaryMuscles: ['core', 'upper_back'], defaultWeight: 50, defaultReps: 1, difficulty: 3 },
+  // ─── UPPER BODY MACHINES (UNABRIDGED) ───
+  { id: 'm-ch1', name: 'Chest Press Machine', category: 'chest', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'compound', primaryMuscles: ['chest'], secondaryMuscles: ['triceps'], defaultWeight: 100, defaultReps: 10, difficulty: 1 },
+  { id: 'm-ch2', name: 'Incline Chest Press', category: 'chest', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'compound', primaryMuscles: ['chest'], secondaryMuscles: ['front_delts'], defaultWeight: 90, defaultReps: 10, difficulty: 2 },
+  { id: 'm-ch3', name: 'Decline Chest Press', category: 'chest', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'compound', primaryMuscles: ['chest'], secondaryMuscles: ['triceps'], defaultWeight: 110, defaultReps: 10, difficulty: 2 },
+  { id: 'm-ch4', name: 'Pec Deck / Pec Fly', category: 'chest', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'isolation', primaryMuscles: ['chest'], defaultWeight: 80, defaultReps: 12, difficulty: 1 },
+  { id: 'm-sh1', name: 'Shoulder Press Machine', category: 'shoulders', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'compound', primaryMuscles: ['front_delts'], secondaryMuscles: ['triceps'], defaultWeight: 60, defaultReps: 10, difficulty: 1 },
+  { id: 'm-sh2', name: 'Lateral Raise Machine', category: 'shoulders', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'isolation', primaryMuscles: ['side_delts'], defaultWeight: 30, defaultReps: 15, difficulty: 1 },
+  { id: 'm-bk1', name: 'Lat Pulldown Machine', category: 'back', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'compound', primaryMuscles: ['lats'], secondaryMuscles: ['biceps'], defaultWeight: 100, defaultReps: 10, difficulty: 1 },
+  { id: 'm-bk2', name: 'Seated Row Machine', category: 'back', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'compound', primaryMuscles: ['upper_back'], defaultWeight: 110, defaultReps: 10, difficulty: 1 },
+  { id: 'm-bk3', name: 'T-Bar Row Machine', category: 'back', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'compound', primaryMuscles: ['upper_back'], defaultWeight: 90, defaultReps: 10, difficulty: 2 },
+  { id: 'm-bk4', name: 'Assisted Pull-Up Machine', category: 'back', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'compound', primaryMuscles: ['lats'], defaultWeight: 60, defaultReps: 8, difficulty: 1 },
+  { id: 'm-bi1', name: 'Bicep Curl Machine', category: 'biceps', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'isolation', primaryMuscles: ['biceps'], defaultWeight: 50, defaultReps: 12, difficulty: 1 },
+  { id: 'm-tri1', name: 'Tricep Extension Machine', category: 'triceps', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'isolation', primaryMuscles: ['triceps'], defaultWeight: 50, defaultReps: 12, difficulty: 1 },
+  { id: 'm-tri2', name: 'Overhead Tricep Machine', category: 'triceps', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'isolation', primaryMuscles: ['triceps'], defaultWeight: 40, defaultReps: 12, difficulty: 2 },
+  { id: 'm-tri3', name: 'Triceps Press Machine', category: 'triceps', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'compound', primaryMuscles: ['triceps'], defaultWeight: 80, defaultReps: 10, difficulty: 1 },
+  { id: 'm-tri4', name: 'Dip Machine', category: 'triceps', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'compound', primaryMuscles: ['triceps', 'chest'], defaultWeight: 60, defaultReps: 10, difficulty: 1 },
 
-  // ─── CARDIO ───
-  { id: 'c1', name: 'Treadmill', category: 'cardio', isMachine: true, type: 'cardio', equipment: 'machine', mechanics: 'compound', primaryMuscles: ['quads'], defaultWeight: 0, defaultReps: 1, difficulty: 1 },
-  { id: 'c2', name: 'Air Bike / Assault Bike', category: 'cardio', isMachine: true, type: 'cardio', equipment: 'machine', mechanics: 'compound', primaryMuscles: ['quads', 'shoulders'], defaultWeight: 0, defaultReps: 1, difficulty: 3 },
-  { id: 'c3', name: 'Stair Climber / Stepmill', category: 'cardio', isMachine: true, type: 'cardio', equipment: 'machine', mechanics: 'compound', primaryMuscles: ['glutes'], defaultWeight: 0, defaultReps: 1, difficulty: 3 },
-  { id: 'c4', name: 'Rowing Machine', category: 'cardio', isMachine: true, type: 'cardio', equipment: 'machine', mechanics: 'compound', primaryMuscles: ['lats'], defaultWeight: 0, defaultReps: 1, difficulty: 2 },
-  { id: 'c5', name: 'Ski Erg', category: 'cardio', isMachine: true, type: 'cardio', equipment: 'machine', mechanics: 'compound', primaryMuscles: ['lats', 'triceps'], defaultWeight: 0, defaultReps: 1, difficulty: 2 },
+  // ─── LOWER BODY MACHINES (UNABRIDGED) ───
+  { id: 'm-lg1', name: '45-Degree Leg Press', category: 'legs', isMachine: true, type: 'strength', equipment: 'plate_loaded', mechanics: 'compound', primaryMuscles: ['quads', 'glutes'], defaultWeight: 200, defaultReps: 12, difficulty: 2 },
+  { id: 'm-lg2', name: 'Hack Squat Machine', category: 'legs', isMachine: true, type: 'strength', equipment: 'plate_loaded', mechanics: 'compound', primaryMuscles: ['quads'], defaultWeight: 140, defaultReps: 10, difficulty: 3 },
+  { id: 'm-lg3', name: 'Pendulum Squat', category: 'legs', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'compound', primaryMuscles: ['quads'], defaultWeight: 45, defaultReps: 10, difficulty: 3 },
+  { id: 'm-lg4', name: 'Leg Extension Machine', category: 'legs', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'isolation', primaryMuscles: ['quads'], defaultWeight: 80, defaultReps: 12, difficulty: 1 },
+  { id: 'm-lg5', name: 'Seated Leg Curl', category: 'legs', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'isolation', primaryMuscles: ['hamstrings'], defaultWeight: 70, defaultReps: 12, difficulty: 1 },
+  { id: 'm-lg6', name: 'Lying Leg Curl', category: 'legs', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'isolation', primaryMuscles: ['hamstrings'], defaultWeight: 60, defaultReps: 12, difficulty: 1 },
+  { id: 'm-lg7', name: 'Hip Abductor Machine', category: 'legs', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'isolation', primaryMuscles: ['glutes'], defaultWeight: 100, defaultReps: 15, difficulty: 1 },
+  { id: 'm-lg8', name: 'Hip Adductor Machine', category: 'legs', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'isolation', primaryMuscles: ['quads'], defaultWeight: 100, defaultReps: 15, difficulty: 1 },
+  { id: 'm-lg9', name: 'Hip Thrust / Glute Drive', category: 'legs', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'isolation', primaryMuscles: ['glutes'], defaultWeight: 135, defaultReps: 10, difficulty: 2 },
+  { id: 'm-lg10', name: 'Seated Calf Raise', category: 'legs', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'isolation', primaryMuscles: ['calves'], defaultWeight: 90, defaultReps: 15, difficulty: 1 },
 
-  // ─── FUNCTIONAL ───
-  { id: 'x1', name: 'Smith Machine', category: 'legs', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'compound', primaryMuscles: ['quads'], defaultWeight: 0, defaultReps: 10, difficulty: 2 },
-  { id: 'x2', name: 'Cable Crossover', category: 'chest', isMachine: true, type: 'strength', equipment: 'machine', mechanics: 'isolation', primaryMuscles: ['chest'], defaultWeight: 30, defaultReps: 15, difficulty: 2 },
-  { id: 'x3', name: 'Battle Ropes', category: 'cardio', isMachine: false, type: 'functional', equipment: 'hardware', mechanics: 'compound', primaryMuscles: ['shoulders', 'core'], defaultWeight: 0, defaultReps: 1, difficulty: 3 },
-  { id: 'x4', name: 'Sled Push / Prowler', category: 'legs', isMachine: false, type: 'functional', equipment: 'machine', mechanics: 'compound', primaryMuscles: ['quads', 'glutes'], defaultWeight: 180, defaultReps: 1, difficulty: 3 },
-  { id: 'x5', name: 'TRX Suspension Trainer', category: 'core', isMachine: false, type: 'functional', equipment: 'hardware', mechanics: 'compound', primaryMuscles: ['core'], defaultWeight: 0, defaultReps: 1, difficulty: 2 },
+  // ─── FREE WEIGHTS & HARDWARE (UNABRIDGED) ───
+  { id: 'f-b-sq', name: 'Barbell Back Squat', category: 'legs', isMachine: false, type: 'free-weight', equipment: 'barbell', mechanics: 'compound', primaryMuscles: ['quads', 'glutes'], defaultWeight: 135, defaultReps: 8, difficulty: 3 },
+  { id: 'f-b-dl', name: 'Barbell Deadlift', category: 'back', isMachine: false, type: 'free-weight', equipment: 'barbell', mechanics: 'compound', primaryMuscles: ['lower_back', 'glutes', 'hamstrings'], defaultWeight: 225, defaultReps: 5, difficulty: 3 },
+  { id: 'f-b-bp', name: 'Barbell Bench Press', category: 'chest', isMachine: false, type: 'free-weight', equipment: 'barbell', mechanics: 'compound', primaryMuscles: ['chest'], defaultWeight: 135, defaultReps: 10, difficulty: 3 },
+  { id: 'f-d-bp', name: 'Dumbbell Bench Press', category: 'chest', isMachine: false, type: 'free-weight', equipment: 'dumbbell', mechanics: 'compound', primaryMuscles: ['chest'], defaultWeight: 50, defaultReps: 10, difficulty: 2 },
+  { id: 'f-kb-s', name: 'Kettlebell Swing', category: 'legs', isMachine: false, type: 'free-weight', equipment: 'kettlebell', mechanics: 'compound', primaryMuscles: ['glutes', 'hamstrings'], defaultWeight: 35, defaultReps: 15, difficulty: 2 },
+  { id: 'f-t-dl', name: 'Trap Bar Deadlift', category: 'legs', isMachine: false, type: 'free-weight', equipment: 'barbell', mechanics: 'compound', primaryMuscles: ['quads', 'glutes'], defaultWeight: 135, defaultReps: 8, difficulty: 2 },
+
+  // ─── STRONGMAN & SPECIALTY ───
+  { id: 'st-as', name: 'Atlas Stones', category: 'back', isMachine: false, type: 'strongman', equipment: 'hardware', mechanics: 'compound', primaryMuscles: ['lower_back', 'glutes'], defaultWeight: 100, defaultReps: 1, difficulty: 3 },
+  { id: 'st-log', name: 'Log Press', category: 'shoulders', isMachine: false, type: 'strongman', equipment: 'hardware', mechanics: 'compound', primaryMuscles: ['shoulders', 'triceps'], defaultWeight: 90, defaultReps: 5, difficulty: 3 },
+  { id: 'st-fw', name: "Farmer's Walk Handles", category: 'back', isMachine: false, type: 'strongman', equipment: 'hardware', mechanics: 'compound', primaryMuscles: ['forearms', 'traps'], defaultWeight: 100, defaultReps: 1, difficulty: 2 },
+  { id: 'x-sled', name: 'Sled Push / Prowler', category: 'legs', isMachine: false, type: 'functional', equipment: 'machine', mechanics: 'compound', primaryMuscles: ['quads', 'glutes'], defaultWeight: 180, defaultReps: 1, difficulty: 3 },
+  { id: 'x-rope', name: 'Battle Ropes', category: 'cardio', isMachine: false, type: 'functional', equipment: 'hardware', mechanics: 'compound', primaryMuscles: ['shoulders', 'core'], defaultWeight: 0, defaultReps: 1, difficulty: 3 },
 ];
