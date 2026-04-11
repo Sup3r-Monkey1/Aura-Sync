@@ -19,7 +19,7 @@ export default function EvolutionRank() {
   };
 
   const getMGlow = (m: string) => {
-    if (!session) return "0px 0px 5px rgba(255,255,255,0.05)";
+    if (!session) return "none";
     const h = muscleHeat.find(x => x.group === m)?.heat || 0;
     return h > 45 ? `drop-shadow(0 0 ${h/5}px ${getMColor(m)})` : "none";
   };
@@ -27,15 +27,15 @@ export default function EvolutionRank() {
   return (
     <div className="min-h-screen bg-[#050505] p-4 pt-10 pb-24 overflow-x-hidden">
       <h2 className="text-sm font-black uppercase tracking-[0.4em] text-white/70 italic px-2 aura-text-glow">Evolution_Anatomy</h2>
-      <p className="text-[10px] text-white/30 mt-1 px-2 uppercase font-mono tracking-widest font-black">CORE_XP: <span className="text-cobalt">{evolutionXP}</span></p>
+      <p className="text-[9px] text-white/30 mt-1 px-2 uppercase font-mono tracking-widest font-black">CORE_XP: <span className="text-cobalt">{evolutionXP}</span></p>
 
-      <div className="glass-strong p-10 mt-8 mb-8 flex flex-col items-center relative overflow-hidden border-t border-white/10 rounded-3xl">
+      <div className="glass-strong p-10 mt-6 mb-6 flex flex-col items-center relative overflow-hidden border-t border-white/10 rounded-3xl">
         <div className="relative w-64 h-[450px] flex justify-center">
            <svg viewBox="0 0 200 400" className="w-full h-full drop-shadow-[0_0_2px_rgba(255,255,255,0.05)]">
               {/* HEAD */}
               <path d="M88 40 Q100 20 112 40 Q112 65 100 75 Q88 65 88 40 Z" fill={getMColor('core')} />
-              {/* CHEST / ABS (CONTOURED) */}
-              <path d="M60 80 Q100 70 140 80 L135 150 Q100 165 65 150 Z" fill={getMColor('chest')} style={{ filter: getMGlow('chest') }} />
+              {/* CHEST / ABS (ATHLETIC CONTOUR) */}
+              <path d="M60 80 Q100 72 140 80 L135 150 Q100 165 65 150 Z" fill={getMColor('chest')} style={{ filter: getMGlow('chest') }} />
               <rect x="85" y="152" width="30" height="42" fill={getMColor('core')} rx="2" className="opacity-80" />
               {/* BACK / SHOULDERS */}
               <path d="M60 82 L45 130 Q60 140 65 130 Z" fill={getMColor('back')} />
@@ -54,11 +54,11 @@ export default function EvolutionRank() {
       </div>
 
       <div className="grid grid-cols-3 gap-2 mb-8 font-mono">
-         <div className="glass p-4 text-center rounded-xl"><Heart size={14} className={watchConnected ? "text-red-500 animate-pulse" : "text-white/5"} /><div className="text-lg font-black mt-2 text-white aura-text-glow">{watchConnected ? "64bpm" : "--"}</div><div className="text-[7px] text-white/20 uppercase font-bold tracking-widest mt-1">Bio_Sync</div></div>
-         <div className="glass p-4 text-center border-b border-cobalt/40 rounded-xl"><Activity size={14} className="text-cobalt" /><div className="text-lg font-black mt-2 text-white aura-text-glow">{history.length}</div><div className="text-[7px] text-white/20 uppercase font-bold tracking-widest mt-1">Logs</div></div>
+         <div className="glass p-4 text-center rounded-xl"><Heart size={14} className={watchConnected ? "text-red-500 animate-pulse" : "text-white/5"} /><div className="text-lg font-black mt-2 text-white aura-text-glow">{watchConnected ? "64" : "--"}</div><div className="text-[7px] text-white/20 uppercase font-bold tracking-widest mt-1">Bio_Sync</div></div>
+         <div className="glass p-4 text-center border-b border-cobalt/40 rounded-xl"><Activity size={14} className="text-cobalt" /><div className="text-lg font-black mt-2 text-white aura-text-glow">{history.length}</div><div className="text-[7px] text-white/20 uppercase font-bold tracking-widest mt-1">Syncs</div></div>
          <div className="glass p-4 text-center rounded-xl"><ShieldCheck size={14} className="text-terminal" /><div className="text-lg font-black mt-2 text-white">{Math.min(100, history.length*5)}%</div><div className="text-[7px] text-white/20 uppercase font-bold tracking-widest mt-1">Status</div></div>
       </div>
-      {!watchConnected && <button onClick={connectWatch} className="w-full py-5 bg-white/5 border border-white/10 text-white/40 font-black uppercase text-[10px] tracking-[0.4em] active:bg-cobalt active:text-black transition-all rounded-xl shadow-lg font-mono">Authorize Hardware Bio-Link</button>}
+      {!watchConnected && <button onClick={connectWatch} className="w-full py-5 bg-white/5 border border-white/10 text-white/40 font-black uppercase text-[8px] tracking-[0.4em] active:bg-cobalt active:text-black transition-all rounded-xl shadow-lg">Establish Hardware Bio-Link</button>}
     </div>
   );
 }
