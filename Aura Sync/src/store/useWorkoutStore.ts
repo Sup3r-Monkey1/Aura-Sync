@@ -5,7 +5,6 @@ import { createEmptyHeatmap, addHeatFromExercise, applyDecay } from '../engine/h
 import { calculateReadiness, simulateHRV, simulateSleep } from '../engine/readiness';
 import { isPR } from '../engine/overload';
 
-// 🔊 NAMED EXPORT FOR BUILD STABILITY
 export const triggerAlert = (type: 'success' | 'warning') => {
   try {
     if ('vibrate' in navigator) navigator.vibrate(type === 'success' ? [100, 50, 100] : [300]);
@@ -126,10 +125,16 @@ export const useWorkoutStore = create<WorkoutState>()(
       },
       connectWatch: async () => {
         try {
-          const device = await (navigator as any).bluetooth.requestDevice({ filters: [{ services: ['heart_rate'] }] });
-          await device.gatt.connect(); set({ watchConnected: true });
+          const device = await (navigator as any).bluetooth.requestDevice({ 
+            filters: [{ services: ['heart_rate'] }],
+            optionalServices: ['battery_service']
+          });
+          await device.gatt.connect(); 
+          set({ watchConnected: true });
           device.addEventListener('gattserverdisconnected', () => set({ watchConnected: false }));
-        } catch (e) { set({ watchConnected: false }); }
+        } catch (e) {
+          set({ watchConnected: false });
+        }
       },
       decayHeatmap: () => set({ muscleHeat: applyDecay(get().muscleHeat) }),
       refreshReadiness: () => set({ readiness: calculateReadiness(simulateHRV(), simulateSleep(), 0) }),
