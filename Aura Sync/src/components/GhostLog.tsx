@@ -46,7 +46,7 @@ export default function GhostLog() {
       }
     }
     return () => clearInterval(interval);
-  }, [timeLeft, isPaused, timerState, session, activeCardId, activeSetIndex, completeSet, restDuration, setDuration, setTracking]);
+  }, [timeLeft, isPaused, timerState, session, activeCardId, activeSetIndex]);
 
   if (!session) return (
     <div className="min-h-screen bg-[#050505] p-4 pt-10 pb-32 overflow-y-auto no-scrollbar">
@@ -55,7 +55,7 @@ export default function GhostLog() {
       <div className="aura-card p-5 mb-6 rounded-2xl">
         <div className="flex gap-1 overflow-x-auto no-scrollbar mb-6">
           {days.map(d => (
-            <button key={d} onClick={() => setActiveDay(d)} className={`px-4 py-2 shrink-0 text-[10px] font-black uppercase border transition-all ${activeDay === d ? 'bg-cobalt text-black border-cobalt' : 'bg-white/5 border-white/10 text-white/30'}`}>{d.slice(0,3)}</button>
+            <button key={d} onClick={() => setActiveDay(d)} className={`px-4 py-2 shrink-0 text-[10px] font-black uppercase border transition-all ${activeDay === d ? 'bg-cobalt text-black border-cobalt shadow-[0_0_15px_#2563eb]' : 'bg-white/5 border-white/10 text-white/30'}`}>{d.slice(0,3)}</button>
           ))}
         </div>
 
@@ -67,10 +67,10 @@ export default function GhostLog() {
 
         <div className="relative mb-4">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/20" />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="SEARCH_HARDWARE..." className="w-full bg-white/5 border border-white/10 p-3 pl-10 text-[10px] uppercase font-black tracking-widest text-white outline-none focus:border-cobalt/50 font-mono" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="SEARCH_HARDWARE..." className="w-full bg-white/5 border border-white/10 p-3 pl-10 text-[10px] uppercase font-black tracking-widest text-white outline-none focus:border-cobalt/50" />
         </div>
 
-        <div className="grid grid-cols-1 gap-2 max-h-[35vh] overflow-y-auto no-scrollbar mb-6 py-2 border-y border-white/5 font-mono">
+        <div className="grid grid-cols-1 gap-2 max-h-[30vh] overflow-y-auto no-scrollbar mb-6 py-2 border-y border-white/5">
           {filteredRegistry.map(ex => {
             const isSelected = dailyProtocols[activeDay]?.includes(ex.id);
             return (
@@ -85,27 +85,27 @@ export default function GhostLog() {
       </div>
 
       <div className="aura-card p-5 border-l-4 border-magenta">
-         <div className="text-[9px] font-black text-magenta uppercase mb-3 font-mono tracking-widest flex items-center gap-2"><Edit3 size={14}/> Mission_Directives</div>
+         <div className="text-[9px] font-black text-magenta uppercase mb-3 flex items-center gap-2 font-mono tracking-widest"><Edit3 size={14}/> Mission_Directives</div>
          <p className="text-[11px] text-white/50 font-mono italic leading-relaxed">{scheduleNotes[today] || "Awaiting target acquisition."}</p>
       </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-[#050505] pb-32 overflow-x-hidden font-mono">
+    <div className="min-h-screen bg-[#050505] pb-32 overflow-x-hidden font-mono text-[10px]">
       <div className={`sticky top-0 z-[100] p-6 border-b border-white/5 transition-all duration-700 backdrop-blur-3xl ${timerState === 'SET' ? 'bg-cobalt/40' : timerState === 'REST' ? 'bg-magenta/40' : 'bg-black/95'}`}>
         <div className="flex justify-between items-center mb-6 px-2">
            <div className="text-[9px] font-black uppercase text-white/40 tracking-[0.3em] font-mono italic">{timerState}_LOCKED</div>
            <button onClick={endSession} className="px-5 py-2 bg-red-500 text-black text-[9px] font-black uppercase active:scale-90 transition-all rounded-lg shadow-lg shadow-red-500/20">Abort</button>
         </div>
         <div className="flex flex-col items-center">
-          <div className="text-7xl font-black italic tracking-tighter text-glow-cobalt text-white leading-none">{Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}</div>
+          <div className="text-7xl font-black italic tracking-tighter text-glow-cobalt text-white leading-none font-mono">{Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}</div>
           <button onClick={() => setIsPaused(!isPaused)} className="mt-4 px-10 py-3 bg-white/10 text-[9px] font-black uppercase tracking-[0.2em] border border-white/10 rounded-full">{isPaused ? 'Resume' : 'Pause'}</button>
         </div>
       </div>
       <div className="p-4 space-y-6 mt-6">
         {session.cards.map((card) => (
-          <div key={card.id} className="space-y-4">
+          <div key={card.id} className="space-y-4 font-sans">
             <div className="flex justify-between items-end border-l-2 border-cobalt pl-3">
               <div><h3 className="text-base font-black italic uppercase text-white/90 truncate max-w-[200px]">{card.exercise.name}</h3><p className="text-[8px] text-white/30 uppercase tracking-[0.2em]">{card.exercise.equipment}</p></div>
               <button onClick={() => removeExercise(card.id)} className="text-white/10 p-1"><X size={14}/></button>
